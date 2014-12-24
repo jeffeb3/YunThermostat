@@ -17,10 +17,15 @@
 #include <Bridge.h>
 #include <YunServer.h>
 #include <YunClient.h>
+#include <DHT.h>
 
 // Listen on default port 5555, the webserver on the Yún
 // will forward there all the HTTP requests for us.
 YunServer server;
+
+#define DHTPIN 10
+
+DHT dht(DHTPIN, DHT22);
 
 void setup() 
 {
@@ -29,6 +34,15 @@ void setup()
   digitalWrite(13, HIGH);
   Bridge.begin();
   digitalWrite(13, LOW);
+  
+  // Use the pins to power the DHT. It's easier than using jumpers
+  // Connect the DHT22 (RHT03) in D9-D12. 
+  // Rotate the sensor so you can see the grill and the arduino pins at the same time.
+  // PINOUT: Vcc, Signal, NC, Gnd when you can see the grill.
+  pinMode(9,OUTPUT);
+  pinMode(12,OUTPUT);
+  digitalWrite(9,HIGH);
+  digitalWrite(12,LOW);
 
   // Listen for incoming connection only from localhost
   // (no one from the external network could connect)
@@ -80,8 +94,16 @@ void process(YunClient client)
 
 void readSensors(YunClient client) 
 {
+  float temp = dht.readTemperature(true);
+  float humidity = dht.readHumidity();
   // Send feedback to client
-  client.println(F("{ temperature : 0, humidity: 0 }"));
+  client.print(F("{\n"));
+  client.print(F("  temperature : "));
+  client.print(temp);
+  client.print(F(",\n"));
+  client.print(F("  humidity: "));
+  client.print(humidity);
+  client.println(F("\n}"));
 }
 
 void heatCommand(YunClient client) 
@@ -97,9 +119,4 @@ void heatCommand(YunClient client)
   client.print(F("The heat is ... "));
   client.println((on == 1 ? F("On") : F("Off")));
 }
-
-
-
-
-
 
