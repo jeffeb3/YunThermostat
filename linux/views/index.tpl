@@ -10,7 +10,7 @@
         <meta name="description" content="">
         <meta name="viewport" content="width=device-width, initial-scale=1">
 
-        <!--<link href="//netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css" rel="stylesheet">-->
+        <link href="//netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css" rel="stylesheet">
         <style>
             body {
               padding-top: 50px;
@@ -48,9 +48,11 @@
                 <div id="placeholder" class="plot-placeholder" style="width: 100%;height:400px; text-align: center; margin:0 auto;"></div>
             </div>
         </div>
-        <script src="javascript/jquery/jquery.min.js"></script>
+        <script src="//ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
         <script src="javascript/jquery-flot/jquery.flot.js"></script>
         <script src="javascript/jquery-flot/jquery.flot.time.js"></script>
+        <!--<script src="//netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>-->
+        <!--<script src="http://cdn.bobcravens.com/wp-content/uploads/2011/01/jquery.flot.js"></script>-->
         <script>
             $(document).ready(function()
             {
@@ -61,8 +63,6 @@
                 }
                 
                 var xIndex = 0;
-
-                // this double curly braces is a keyword for bottle to replace with text from python.
                 var plotData = {{plotData}};
 
                 var lastMeasure = 0.0;
@@ -140,11 +140,11 @@
                     {
                         show: true
                     },
-                    //yaxis:
-                    //{
-                    //    min: 67,
-                    //    max: 73
-                    //},
+                    yaxis:
+                    {
+                        min: 67,
+                        max: 73
+                    },
                     xaxis:
                     {
                         mode: "time",

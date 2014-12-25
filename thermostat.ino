@@ -98,10 +98,10 @@ void readSensors(YunClient client)
   float humidity = dht.readHumidity();
   // Send feedback to client
   client.print(F("{\n"));
-  client.print(F("  temperature : "));
+  client.print(F("  \"temperature\" : "));
   client.print(temp);
   client.print(F(",\n"));
-  client.print(F("  humidity: "));
+  client.print(F("  \"humidity\": "));
   client.print(humidity);
   client.println(F("\n}"));
 }
