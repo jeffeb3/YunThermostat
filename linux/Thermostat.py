@@ -2,6 +2,7 @@
 
 # todo:
 # - Install on Yun
+#  - Switch from gevents to threading...
 # - Add uptime on atmega
 # - Create file history of status/temps
 # - watchdogs on the atmega and reboots of the arm
@@ -15,25 +16,24 @@
 # - GPS fencing
 
 # Import system libraries.
-import gevent
-from gevent import monkey; monkey.patch_all() # this affects the other imports!
-from gevent.event import AsyncResult
-from gevent.lock import BoundedSemaphore
+import threading
 import socket
 import signal
 import time
 import json
 import urllib2
 import os
+import copy
 
 # Import flask library.
-from bottle import run, Bottle
+from bottle import run, Bottle, PasteServer
 from bottle import route, static_file, request, template, response
+
 
 web = Bottle()
 
 plotData = []
-plotDataLock = BoundedSemaphore()
+plotDataLock = threading.RLock()
 
 def formattedPlotData():
     ''' Format the global plotData object to be in the format that flot expects'''
@@ -45,7 +45,8 @@ def formattedPlotData():
     textData += ']]'
     return textData
 
-currentMeasurement = AsyncResult()
+currentMeasurement = None
+currentMeasurementLock = threading.RLock()
 
 def uptime():
     ''' get this system's seconds since starting '''    
@@ -53,24 +54,36 @@ def uptime():
         uptime_seconds = float(f.readline().split()[0])
         return uptime_seconds
 
-def queryForever():
-    '''Try to read from a REST server forever'''
-    try:
-        while True:
-            lastMeasurementTime = time.time()
-            # Get data from server.
-            data = json.load(urllib2.urlopen("http://10.0.2.208/arduino/sensors"));
-            data["time"] = (time.time() - time.timezone) * 1000.0
-            data["py_uptime"] = uptime()
-            #print 'new measurement:' + str(data)
-            with plotDataLock:
-                plotData.append((data["time"], data["temperature"]))
-
-            currentMeasurement.set(data)
-            gevent.sleep(30 - (time.time() - lastMeasurementTime))
-            
-    except socket.error: # todo, pick a better exception
-        raise StopIteration
+class QueryThread(threading.Thread):
+    def __init__(self):
+        threading.Thread.__init__(self)
+        self.quit = False
+    
+    def run(self):
+        '''Try to read from a REST server forever'''
+        try:
+            while not self.quit:
+                lastMeasurementTime = time.time()
+                # Get data from server.
+                data = json.load(urllib2.urlopen("http://10.0.2.208/arduino/sensors"));
+                data["time"] = (time.time() - time.timezone) * 1000.0
+                data["py_uptime"] = uptime()
+                with plotDataLock:
+                    plotData.append((data["time"], data["temperature"]))
+    
+                with currentMeasurementLock:
+                    global currentMeasurement
+                    currentMeasurement = data
+                
+                # sleep a moment at a time, so that we can catch the quit signal
+                while (time.time() - lastMeasurementTime) < 30.0 and not self.quit:
+                    time.sleep(0.5)
+                
+        except socket.error: # todo, pick a better exception
+            raise StopIteration
+    
+    def stop(self):
+        self.quit = True
 
 # Generator function to connect to the YunServer instance and send
 # all data received from it to the webpage as HTML5 server sent events.
@@ -82,7 +95,10 @@ def yunserver_sse():
     try:
         while True:
             # Get data from thead.
-            data = currentMeasurement.get()
+            data = None
+            with currentMeasurementLock:
+                # deep copy
+                data = copy.copy(currentMeasurement)
 
             # Stop if the server closed the connection.
             if not data:
@@ -112,6 +128,7 @@ def JavascriptCallback(path):
   return static_file('javascript/'+path, root='.')
 
 if __name__ == '__main__':
-    gevent.signal(signal.SIGQUIT, gevent.kill)
-    gevent.spawn(queryForever)
-    web.run(host='0.0.0.0', debug=True, server='gevent')
+    query = QueryThread()
+    query.start()
+    web.run(host='0.0.0.0', debug=True, server=PasteServer)
+    query.stop()
