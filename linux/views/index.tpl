@@ -5,54 +5,65 @@
 <!--[if gt IE 8]><!--> <html class="no-js"> <!--<![endif]-->
     <head>
         <meta charset="utf-8">
-        <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+        <!--<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">-->
         <title>Smart Temperature Sensor</title>
         <meta name="description" content="">
         <meta name="viewport" content="width=device-width, initial-scale=1">
+        <link rel="stylesheet" href="javascript/jquery-mobile/jquery.mobile.css">
 
         <style>
-            body {
-              padding-top: 50px;
-              padding-bottom: 20px;
+            .plot-placeholder
+            {
+                width : 90%;
+                height : 250px;
+                text-align : center;
+                margin : 0 auto;
             }
         </style>
-
+        
         <!--[if lt IE 9]>
             <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
             <script>window.html5 || document.write('<script src="js/vendor/html5shiv.js"><\/script>')</script>
         <![endif]-->
+        
     </head>
     <body>
         <!--[if lt IE 7]>
             <p class="browsehappy">You are using an <strong>outdated</strong> browser. Please <a href="http://browsehappy.com/">upgrade your browser</a> to improve your experience.</p>
-        <![endif]--> 
-        <div class="container">
-            <div class="jumbotron">
-                <h1>Smart Temperature Sensor</h1>
+        <![endif]-->
+
+        <!-- Start web page layout -->
+        
+        <div data-role="page" id="ContentsPage" data-theme="b">
+            <div data-role="header">
+                <a href="#ContentsPage" class="ui-btn ui-icon-home ui-btn-icon-left ui-btn-icon-notext">Home</a>
+                <h1>Thermostat at {{ipaddress}}</h1>
             </div>
-            <div class="row" id="status">
-                <div class="col-md-12">
-                    <h3>Connecting...</h3>
+            <div data-role="main" class="ui-content">
+                <h3 class="status">Connecting...</h3>
+                <div data-role="collapsible">
+                    <h1>Temperature: <span id="temperature">0</span> <span id="symbol"> &degF</span> Humidity: <span id="humidity">0</span>%</h1>
+                    <div id="tempPlaceholder" class="plot-placeholder ui-body-inherit"></div>
+                </div>
+                <div data-role="collapsible">
+                    <h1>Uptime: <span id="uptime_number">0</span></h1>
+                    <div id="uptimePlaceholder" class="plot-placeholder"></div>
                 </div>
             </div>
-            <div class="row" id="main">
-                <div class="col-md-2">
-                    <label>Temperature:</label>
-                    <h3>
-                        <span id="measurement">0</span> <span id="symbol">deg F</span>
-                    </h3>
-                </div>
-            </div>
-            <div class="row" id="plot">
-                <div id="placeholder" class="plot-placeholder" style="width: 100%;height:400px; text-align: center; margin:0 auto;"></div>
-            </div>
+            <div data-role="footer"><h1></h1></div>
         </div>
+        
+        
+        <!-- Start scripts -->
         <script src="javascript/jquery/jquery.min.js"></script>
+        <script src="javascript/jquery-mobile/jquery.mobile.js"></script>
         <script src="javascript/jquery-flot/jquery.flot.js"></script>
         <script src="javascript/jquery-flot/jquery.flot.time.js"></script>
+        <script src="javascript/jquery-flot/jquery.flot.resize.js"></script>
         <script>
             $(document).ready(function()
             {
+                // This is to debug problems with the javascript.
                 window.onerror = function(msg, url, linenumber)
                 {
                     alert('Error message: '+msg+'\nURL: '+url+'\nLine Number: '+linenumber);
@@ -62,45 +73,65 @@
                 var xIndex = 0;
 
                 // this double curly braces is a keyword for bottle to replace with text from python.
-                var plotData = {{plotData}};
+                var tempPlotData = [ { label: "Temp(&degF)", data: {{tempPlotData}} }, { label: "Humidity(%)", data: {{humidPlotData}}, yaxis: 2 } ];
+                var uptimePlotData = [ { label: "Arduino", data: [] }, { label: "Linux", data: [] } ];
 
-                var lastMeasure = 0.0;
                 var lastMeasureTime = 0.0;
 
+                function msToText(milliseconds)
+                {
+                    var seconds = milliseconds / 1000.0;
+                    var minutes = Math.floor(seconds / 60.0);
+                    seconds -= minutes * 60.0;
+                    var hours = Math.floor(minutes / 60.0);
+                    minutes -= hours * 60.0;
+                    var days = Math.floor(hours / 24.0);
+                    hours -= days * 24.0;
+                    
+                    var text = hours.toString() + ':' + minutes.toString() + ':' + seconds.toPrecision(3).toString();
+                    if (days > 0)
+                    {
+                        text = days.toString() + 'd ' + text;
+                    }
+                    return text;
+                }
+                
+                function clipData(data, maxNum = 1000)
+                {
+                    if (data.length > maxNum)
+                    {
+                        data = data.slice(maxNum);
+                    }
+                }
+                
                 function updateMeasurement(data)
                 {
                     if (data.time != lastMeasureTime)
                     {
                         lastMeasureTime = data.time
                         // Update the plot
-                        plotData[0].push([data.time,data.temperature]);
-                        // clip to 10 points
-                        if (plotData[0].length > 600)
-                        {
-                            plotData[0] = plotData[0].slice(1);
-                        }
+                        tempPlotData[0].data.push([data.time,data.temperature]);
+                        tempPlotData[1].data.push([data.time,data.humidity]);
+                        uptimePlotData[0].data.push([data.time,data.uptime_ms]);
+                        uptimePlotData[1].data.push([data.time,data.py_uptime_ms]);
+    
+                        clipData(tempPlotData[0].data);
+                        clipData(tempPlotData[1].data);
+                        clipData(uptimePlotData[0].data);
+                        clipData(uptimePlotData[1].data);
                         
-                        plot.setData(plotData);
-                        plot.setupGrid();
-                        plot.draw();
+                        tempPlot.setData(tempPlotData);
+                        tempPlot.setupGrid();
+                        tempPlot.draw();
+                        
+                        uptimePlot.setData(uptimePlotData);
+                        uptimePlot.setupGrid();
+                        uptimePlot.draw();
                         
                         // Update the UI.
-                        $('#measurement').text(data.temperature.toPrecision(5));
-                    }
-                }
-
-                function setStatus(status)
-                {
-                    if (status)
-                    {
-                        // Update status text and show the state area.
-                        $('#status h3').text(status);
-                        $('#status').show();
-                    }
-                    else
-                    {
-                        // Hide status area if null/empty status.
-                        $('#status').hide();
+                        $('#temperature').text(data.temperature.toPrecision(3));
+                        $('#humidity').text(data.humidity.toPrecision(3));
+                        $('#uptime_number').text('Arduino: ' + msToText(data.uptime_ms) + ' Linux: ' + msToText(data.py_uptime_ms));
                     }
                 }
 
@@ -114,23 +145,32 @@
                     // Update measurement value.
                     var data = JSON.parse(e.data);
                     updateMeasurement(data);
-                    lastMeasure = data.temperature;
                 };
                 server.onopen = function(e)
                 {
                     // Hide connecting status and show controls.
-                    $('#status').hide();
+                    $('.status').hide();
                     $('#main').show();
                 };
                 server.onerror = function(e)
                 {      
                     // Hide controls and show connecting status.
                     $('#main').hide();
-                    $('#status h3').text('Connecting...');
-                    $('#status').show();
+                    $('.status h3').text('Connecting...');
+                    $('.status').show();
                 };
 
-                var plot = $.plot("#placeholder", [ plotData ], 
+                function humidityPercent(humidity, axis)
+                {
+                    return humidity.toFixed(axis.tickDecimals) + "%%";
+                }
+                
+                function temperatureDeg(temperature, axis)
+                {
+                    return temperature.toFixed(axis.tickDecimals) + "F";
+                }
+                
+                var tempPlot = $.plot("#tempPlaceholder", [ tempPlotData ], 
                 {
                     series:
                     {
@@ -144,14 +184,46 @@
                     {
                         show: true
                     },
-                    //yaxis:
-                    //{
-                    //    min: 67,
-                    //    max: 73
-                    //},
+                    yaxis:
+                    [
+                    {
+                        tickFormatter : temperatureDeg,
+                        tickDecimals : 0
+                    },
+                    {
+                        alignTicksWithAxis : null,
+                        position : "left",
+                        tickDecimals : 0,
+                        tickFormatter : humidityPercent
+                    }
+                    ],
                     xaxis:
                     {
                         mode: "time",
+                    }
+                });
+
+                var uptimePlot = $.plot("#uptimePlaceholder", [ uptimePlotData ], 
+                {
+                    series:
+                    {
+                        shadowSize: 0	// Drawing is faster without shadows
+                    },
+                    lines:
+                    {
+                        show: true
+                    },
+                    points:
+                    {
+                        show: true
+                    },
+                    xaxis:
+                    {
+                        mode: "time",
+                    },
+                    yaxis:
+                    {
+                        tickFormatter: msToText
                     }
                 });
 

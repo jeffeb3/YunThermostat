@@ -1,16 +1,16 @@
 #!/usr/bin/env python
 
 # todo:
-# - Install on Yun
-#  - Switch from gevents to threading...
-# - Add uptime on atmega
+# X Install on Yun
+#  X Switch from gevents to threading...
+# X Add uptime on atmega
 # - Create file history of status/temps
 # - watchdogs on the atmega and reboots of the arm
 # - email alerts for resets
 # - hourly program format
-# - style sheet (or just use mobile)
+# X style sheet (or just use mobile)
 # - Add time to front page
-# - Add humidity, and heat on to front page.
+# X Add humidity, and heat on to front page.
 # - hourly program interface (jquery)
 # - smart (ping) adjustments
 # - GPS fencing
@@ -35,15 +35,28 @@ web = Bottle()
 plotData = []
 plotDataLock = threading.RLock()
 
+def ipaddress():
+    # total hack, and will only work on Jeff's network
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    s.connect(("10.0.2.1",80))
+    ip = str(s.getsockname()[0])
+    s.close()
+    return ip
+
 def formattedPlotData():
     ''' Format the global plotData object to be in the format that flot expects'''
-    textData = ''
-    textData += '[['
+    temperatureData = ''
+    temperatureData += '['
+    humidityData = ''
+    humidityData += '['
     with plotDataLock:
-        for time, value in plotData:
-            textData += '[ %f, %f],' % (time, value)
-    textData += ']]'
-    return textData
+        for data in plotData:
+            temperatureData += '[ %f, %f],' % (data["time"], data["temperature"])
+            humidityData += '[ %f, %f],' % (data["time"], data["humidity"])
+    temperatureData += ']'
+    humidityData += ']'
+
+    return { "tempPlotData" : temperatureData, "humidPlotData" : humidityData, "ipaddress" : ipaddress() }
 
 currentMeasurement = None
 currentMeasurementLock = threading.RLock()
@@ -67,9 +80,9 @@ class QueryThread(threading.Thread):
                 # Get data from server.
                 data = json.load(urllib2.urlopen("http://10.0.2.208/arduino/sensors"));
                 data["time"] = (time.time() - time.timezone) * 1000.0
-                data["py_uptime"] = uptime()
+                data["py_uptime_ms"] = uptime() * 1000.0
                 with plotDataLock:
-                    plotData.append((data["time"], data["temperature"]))
+                    plotData.append(data)
     
                 with currentMeasurementLock:
                     global currentMeasurement
@@ -103,15 +116,10 @@ def yunserver_sse():
             # Stop if the server closed the connection.
             if not data:
                 raise StopIteration
-            # Send the data to the web page in the server sent event format. TODO use the JSON printer.
-            eventText = ''
-            eventText += 'data: {\n'
-            eventText += 'data:   "time" : %f,\n' % data["time"]
-            eventText += 'data:   "temperature" : %f,\n' % data["temperature"]
-            eventText += 'data:   "humidity" : %f\n' % data["humidity"]
-            eventText += 'data: }\n\n'
-            #print eventText,
-            yield eventText
+
+            # Send the data to the web page in the server sent event format.
+            yield 'data: %s\n\n' % json.dumps(data)
+
             # Sleep so the CPU isn't consumed by this thread.
             time.sleep(0.5)
     except:
@@ -120,7 +128,7 @@ def yunserver_sse():
 
 @web.route('/')
 def root():
-    return template('index', plotData = formattedPlotData())
+    return template('index', **formattedPlotData())
 
 # router for the jquery scripts
 @web.route('/javascript/<path:path>')
