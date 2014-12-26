@@ -10,7 +10,6 @@
         <meta name="description" content="">
         <meta name="viewport" content="width=device-width, initial-scale=1">
 
-        <link href="//netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css" rel="stylesheet">
         <style>
             body {
               padding-top: 50px;
@@ -48,11 +47,9 @@
                 <div id="placeholder" class="plot-placeholder" style="width: 100%;height:400px; text-align: center; margin:0 auto;"></div>
             </div>
         </div>
-        <script src="//ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+        <script src="javascript/jquery/jquery.min.js"></script>
         <script src="javascript/jquery-flot/jquery.flot.js"></script>
         <script src="javascript/jquery-flot/jquery.flot.time.js"></script>
-        <!--<script src="//netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>-->
-        <!--<script src="http://cdn.bobcravens.com/wp-content/uploads/2011/01/jquery.flot.js"></script>-->
         <script>
             $(document).ready(function()
             {
@@ -63,26 +60,33 @@
                 }
                 
                 var xIndex = 0;
+
+                // this double curly braces is a keyword for bottle to replace with text from python.
                 var plotData = {{plotData}};
 
                 var lastMeasure = 0.0;
+                var lastMeasureTime = 0.0;
 
                 function updateMeasurement(data)
                 {
-                    // Update the plot
-                    plotData[0].push([data.time,data.temperature]);
-                    // clip to 10 points
-                    if (plotData[0].length > 600)
+                    if (data.time != lastMeasureTime)
                     {
-                        plotData[0] = plotData[0].slice(1);
+                        lastMeasureTime = data.time
+                        // Update the plot
+                        plotData[0].push([data.time,data.temperature]);
+                        // clip to 10 points
+                        if (plotData[0].length > 600)
+                        {
+                            plotData[0] = plotData[0].slice(1);
+                        }
+                        
+                        plot.setData(plotData);
+                        plot.setupGrid();
+                        plot.draw();
+                        
+                        // Update the UI.
+                        $('#measurement').text(data.temperature.toPrecision(5));
                     }
-                    
-                    plot.setData(plotData);
-                    plot.setupGrid();
-                    plot.draw();
-                    
-                    // Update the UI.
-                    $('#measurement').text(data.temperature.toPrecision(5));
                 }
 
                 function setStatus(status)
@@ -140,11 +144,11 @@
                     {
                         show: true
                     },
-                    yaxis:
-                    {
-                        min: 67,
-                        max: 73
-                    },
+                    //yaxis:
+                    //{
+                    //    min: 67,
+                    //    max: 73
+                    //},
                     xaxis:
                     {
                         mode: "time",

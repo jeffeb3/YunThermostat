@@ -1,14 +1,26 @@
 #!/usr/bin/env python
 
-## Update Python path to include libraries on SD card.
-#import sys
-#sys.path.append('/mnt/sda1/python-packages')
+# todo:
+# - Install on Yun
+# - Add uptime on atmega
+# - Create file history of status/temps
+# - watchdogs on the atmega and reboots of the arm
+# - email alerts for resets
+# - hourly program format
+# - style sheet (or just use mobile)
+# - Add time to front page
+# - Add humidity, and heat on to front page.
+# - hourly program interface (jquery)
+# - smart (ping) adjustments
+# - GPS fencing
 
 # Import system libraries.
 import gevent
 from gevent import monkey; monkey.patch_all() # this affects the other imports!
-from gevent.queue import Queue
+from gevent.event import AsyncResult
+from gevent.lock import BoundedSemaphore
 import socket
+import signal
 import time
 import json
 import urllib2
@@ -21,34 +33,41 @@ from bottle import route, static_file, request, template, response
 web = Bottle()
 
 plotData = []
+plotDataLock = BoundedSemaphore()
 
 def formattedPlotData():
     ''' Format the global plotData object to be in the format that flot expects'''
     textData = ''
     textData += '[['
-    for time, value in plotData:
-        textData += '[ %f, %f],' % (time, value)
+    with plotDataLock:
+        for time, value in plotData:
+            textData += '[ %f, %f],' % (time, value)
     textData += ']]'
     return textData
 
-currentMeasurement = Queue(1)
+currentMeasurement = AsyncResult()
+
+def uptime():
+    ''' get this system's seconds since starting '''    
+    with open('/proc/uptime', 'r') as f:
+        uptime_seconds = float(f.readline().split()[0])
+        return uptime_seconds
 
 def queryForever():
     '''Try to read from a REST server forever'''
     try:
         while True:
+            lastMeasurementTime = time.time()
             # Get data from server.
             data = json.load(urllib2.urlopen("http://10.0.2.208/arduino/sensors"));
             data["time"] = (time.time() - time.timezone) * 1000.0
-            # is accessing this object allowed without a lock?
-            print 'new measurement:' + str(data)
-            plotData.append((data["time"], data["temperature"]))
-            try:
-                currentMeasurement.get_nowait()
-            except gevent.queue.Empty:
-                True
-            currentMeasurement.put_nowait(data)
-            gevent.sleep(30)
+            data["py_uptime"] = uptime()
+            #print 'new measurement:' + str(data)
+            with plotDataLock:
+                plotData.append((data["time"], data["temperature"]))
+
+            currentMeasurement.set(data)
+            gevent.sleep(30 - (time.time() - lastMeasurementTime))
             
     except socket.error: # todo, pick a better exception
         raise StopIteration
@@ -63,18 +82,12 @@ def yunserver_sse():
     try:
         while True:
             # Get data from thead.
-            data = None
-            try:
-                data = currentMeasurement.get()
-            except gevent.queue.Empty:
-                pass
+            data = currentMeasurement.get()
 
-
-            print 'received:' + str(data)
             # Stop if the server closed the connection.
             if not data:
                 raise StopIteration
-            # Send the data to the web page in the server sent event format.
+            # Send the data to the web page in the server sent event format. TODO use the JSON printer.
             eventText = ''
             eventText += 'data: {\n'
             eventText += 'data:   "time" : %f,\n' % data["time"]
@@ -84,8 +97,8 @@ def yunserver_sse():
             #print eventText,
             yield eventText
             # Sleep so the CPU isn't consumed by this thread.
-            time.sleep(1.0)
-    except gevent.queue.Empty:
+            time.sleep(0.5)
+    except:
         # Error connecting to socket. Raise StopIteration to quit.
         raise StopIteration
 
@@ -98,12 +111,7 @@ def root():
 def JavascriptCallback(path):
   return static_file('javascript/'+path, root='.')
 
-#@web.route('/javascript/<path:path>')
-#def javascript(path):
-#    print os.path.join('/usr/share/javascript',path)
-#    return app.send_static_file(os.path.join('/usr/share/javascript',path))
-
 if __name__ == '__main__':
+    gevent.signal(signal.SIGQUIT, gevent.kill)
     gevent.spawn(queryForever)
     web.run(host='0.0.0.0', debug=True, server='gevent')
-    
