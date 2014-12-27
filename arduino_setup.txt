@@ -28,5 +28,5 @@ scp -r linux/* root@arduino.local:/usr/local/bin/thermostat/
 
 run at startup:
 add this line to the /etc/rc.local:
-/usr/local/bin/thermostat/thermostat.sh
+(sleep 120; /usr/local/bin/thermostat/thermostat.sh)&
 
