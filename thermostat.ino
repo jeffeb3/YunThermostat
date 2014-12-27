@@ -95,14 +95,21 @@ void process(YunClient client)
 void readSensors(YunClient client) 
 {
   float temp = dht.readTemperature(true);
+  Bridge.put("temperature",String(temp));
   float humidity = dht.readHumidity();
+  Bridge.put("humidity", String(humidity));
   // Send feedback to client
   client.print(F("{\n"));
   client.print(F("  \"uptime_ms\" : "));
-  client.print(millis());
+  unsigned long uptime_ms = millis();
+  client.print(uptime_ms);
+  Bridge.put("uptime_ms", String(uptime_ms));
   client.print(F(",\n"));
   client.print(F("  \"temperature\" : "));
   client.print(temp);
+  client.print(F(",\n"));
+  client.print(F("  \"heat\" : "));
+  client.print(digitalRead(13));
   client.print(F(",\n"));
   client.print(F("  \"humidity\": "));
   client.print(humidity);
@@ -121,5 +128,6 @@ void heatCommand(YunClient client)
   // Send feedback to client
   client.print(F("The heat is ... "));
   client.println((on == 1 ? F("On") : F("Off")));
+  Bridge.put("heat",String(on));
 }
 
