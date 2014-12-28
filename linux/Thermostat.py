@@ -112,7 +112,17 @@ def root():
     ''' Return the template, with the formatted data where the {{}} braces are.'''
 
     # store this information in key-value pairs so that the template engine can find them.
-    webPageInformation = \
+    indexInformation = {}
+
+    indexInformation["ipaddress"] = os.uname()[1]
+
+    # replace parts of views/index.tpl with the information in the indexInformation dictionary.
+    return template('index', **indexInformation)
+
+def getUpdaterInfo():
+    ''' returns a dictionary with variables defined for the updater template.'''
+    # store this information in key-value pairs so that the template engine can find them.
+    updaterInfo = \
     {
         "tempPlotData" : '',
         "humidPlotData" : '',
@@ -125,28 +135,37 @@ def root():
     with plotDataLock:
         #plotData = plotdData[-1000:] TODO
         for data in plotData[-1000:]: # clip to 1000 points, that should be enough for now
-            webPageInformation['tempPlotData']          += '[ %f, %f],' % (data["time"], data["temperature"])
-            webPageInformation['humidPlotData']         += '[ %f, %f],' % (data["time"], data["humidity"])
-            webPageInformation['heatPlotData']          += '[ %f, %d],' % (data["time"], data["heat"])
-            webPageInformation['updateTimePlotData']    += '[ %f, %d],' % (data["time"], data["lastUpdateTime"])
-            webPageInformation['arduinoUptimePlotData'] += '[ %f, %f],' % (data["time"], data["uptime_ms"])
-            webPageInformation['linuxUptimePlotData']   += '[ %f, %f],' % (data["time"], data["py_uptime_ms"])
+            updaterInfo['tempPlotData']          += '[ %f, %f],' % (data["time"], data["temperature"])
+            updaterInfo['humidPlotData']         += '[ %f, %f],' % (data["time"], data["humidity"])
+            updaterInfo['heatPlotData']          += '[ %f, %d],' % (data["time"], data["heat"])
+            updaterInfo['updateTimePlotData']    += '[ %f, %d],' % (data["time"], data["lastUpdateTime"])
+            updaterInfo['arduinoUptimePlotData'] += '[ %f, %f],' % (data["time"], data["uptime_ms"])
+            updaterInfo['linuxUptimePlotData']   += '[ %f, %f],' % (data["time"], data["py_uptime_ms"])
 
     # Add the outside brackets to each plot data.
-    for key, value in webPageInformation.items():
-        webPageInformation[key] = '[' + value + ']'
+    for key, value in updaterInfo.items():
+        updaterInfo[key] = '[' + value + ']'
 
-    webPageInformation["ipaddress"] = os.uname()[1]
-    webPageInformation["timezone"] = time.timezone * 1000.0
+    updaterInfo["timezone"] = time.timezone * 1000.0
 
-    # replace parts of views/index.tpl with the information in the webPageInformation dictionary.
-    return template('index', **webPageInformation)
+    return updaterInfo
 
 # router for the jquery scripts
 @web.route('/javascript/<path:path>')
 def JavascriptCallback(path):
+    
+    if path == "updater.js":
+        return template('updater', **getUpdaterInfo())
+    
     ''' Just return any files in the javascript folder. '''
     return static_file('javascript/'+path, root='.')
+
+# router for local static pages
+@web.route('/static/<path:path>')
+def staticPage(path):
+    
+    ''' Just return any files in the static folder. '''
+    return static_file(path, root='static')
 
 if __name__ == '__main__':
     # create an instance of the query.
