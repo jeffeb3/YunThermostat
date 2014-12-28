@@ -20,6 +20,10 @@
                 text-align : center;
                 margin : 0 auto;
             }
+            .plot-legend
+            {
+                padding-right: 10px;
+            }
         </style>
         
     </head>
@@ -30,25 +34,28 @@
             
             <div data-role="header">
                 <a href="#ContentsPage" class="ui-btn ui-icon-home ui-btn-icon-left ui-btn-icon-notext">Home</a>
-                <h1>Thermostat at {{ipaddress}}</h1>
+                <h1>{{ipaddress}}'s Control</h1>
             </div>
             
             <div data-role="main" class="ui-content">
 
-                <h4 id="now"></h4>
+                <h4>Last Update: <span id="now"></span></h4>
                 
                 <h3 class="status">Connecting...</h3>
 
                 <h3 id="heatStatus" style="color:#FF4444">The Heat is ... ON!</h3>
                 
                 <div data-role="collapsible" data-collapsed="false">
-                    <h1>Temperature: <span id="temperature">?</span> &degF Humidity: <span id="humidity">?</span>%</h1>
+                    <h1>T: <span id="temperature">?</span> &degF H: <span id="humidity">?</span>%</h1>
                     <div id="tempPlaceholder" class="plot-placeholder ui-body-inherit"></div>
+                    <div id="tempLegend"      class="legend-placeholder ui-body-inherit"></div>
                 </div>
 
                 <div data-role="collapsible">
-                    <h1>Uptime: <span id="uptime_number">?</span></h1>
+                    <h1>System Health</h1>
+                    <h4>Uptime: <span id="uptime_number">?</span></h4>
                     <div id="uptimePlaceholder" class="plot-placeholder"></div>
+                    <div id="healthLegend"      class="legend-placeholder ui-body-inherit"></div>
                 </div>
 
             </div>
@@ -126,7 +133,11 @@
                             shadowSize: 0, // Drawing is faster without shadows
                             lines: { show: true }
                         },
-                        legend: { position: 'sw' }
+                        legend:
+                        {
+                            noColumns : 4,
+                            container : $("#tempLegend")
+                        }
                     });
             
                 var uptimePlot = $.plot(
@@ -152,6 +163,11 @@
                         yaxis:
                         {
                             tickFormatter: msToText
+                        },
+                        legend:
+                        {
+                            noColumns : 2,
+                            container : $("#healthLegend")
                         }
                     });
             
