@@ -117,6 +117,7 @@ def root():
         "tempPlotData" : '',
         "humidPlotData" : '',
         "heatPlotData" : '',
+        "updateTimePlotData" : '',
         "arduinoUptimePlotData" : '',
         "linuxUptimePlotData" : '',
     }
@@ -127,6 +128,7 @@ def root():
             webPageInformation['tempPlotData']          += '[ %f, %f],' % (data["time"], data["temperature"])
             webPageInformation['humidPlotData']         += '[ %f, %f],' % (data["time"], data["humidity"])
             webPageInformation['heatPlotData']          += '[ %f, %d],' % (data["time"], data["heat"])
+            webPageInformation['updateTimePlotData']    += '[ %f, %d],' % (data["time"], data["lastUpdateTime"])
             webPageInformation['arduinoUptimePlotData'] += '[ %f, %f],' % (data["time"], data["uptime_ms"])
             webPageInformation['linuxUptimePlotData']   += '[ %f, %f],' % (data["time"], data["py_uptime_ms"])
 
