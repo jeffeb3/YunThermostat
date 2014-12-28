@@ -7,12 +7,14 @@
 # X style sheet (or just use mobile)
 # X Add humidity, and heat on to front page.
 # X Add time to front page
+
 # - Create file history of status/temps (csv?, shelf?)
 # - Add ways to navigate the graph
 # - watchdogs on the atmega and the arm with reboots
 # - email alerts for resets/errors
 # - hourly program format
 # - hourly program interface (jquery)
+
 # - smart (ping) adjustments
 # - GPS fencing
 
@@ -49,7 +51,6 @@ class QueryThread(threading.Thread):
         threading.Thread.__init__(self)
         self.quit = False # set to True when you want to stop the while loop.
         self.lastMeasurementTime = 0
-        self.hysteresisDegreesF = 0.3
     
     def run(self):
         '''Try to read from the arduino forever'''
@@ -69,17 +70,9 @@ class QueryThread(threading.Thread):
 
             # Calculate what the set point should be
             setPoint = 71.0 # degrees F
-            if (data["temperature"] < setPoint - self.hysteresisDegreesF):
-                # we are more than the allowable amount below our set point
-                
-                # Turn the heat on!
-                urllib2.urlopen("http://10.0.2.208/arduino/heat/1")
-
-            elif (data["temperature"] > setPoint + self.hysteresisDegreesF):
-                # we are more than the allowable temperature above our set point
-                
-                # Turn off the heat!
-                urllib2.urlopen("http://10.0.2.208/arduino/heat/0")
+            
+            # send the set point to the arduino
+            urllib2.urlopen("http://10.0.2.208/arduino/heat/" + str(setPoint))
 
             # sleep a moment at a time, so that we can catch the quit signal
             while (time.time() - self.lastMeasurementTime) < 30.0 and not self.quit:

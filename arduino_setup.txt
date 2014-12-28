@@ -5,7 +5,9 @@ To setup the arduino:
 1) Update the firmware.
 http://arduino.cc/en/Tutorial/YunSysupgrade
 
-1) Configure it for your password/wifi settings. Open the rest api.
+1) Configure it for your password/wifi settings.
+
+1) Set the REST configuration to Open.
 
 1) Upgrade the storage with an SD card:
 http://arduino.cc/en/Tutorial/ExpandingYunDiskSpace

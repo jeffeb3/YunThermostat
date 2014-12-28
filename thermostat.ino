@@ -27,6 +27,13 @@ YunServer server;
 
 DHT dht(DHTPIN, DHT22);
 
+float setPoint = 72.0;
+float hysteresis = 1.0;
+float recentTemperature = 72.0;
+
+// The amount of time since the last temperature update.
+unsigned long lastUpdateTime = 0;
+
 void setup() 
 {
   // Bridge startup, make the L13 LED go on, then initialize, then off.
@@ -48,6 +55,9 @@ void setup()
   // (no one from the external network could connect)
   server.listenOnLocalhost();
   server.begin();
+  
+  // restart this timer, now that the arduino is up.
+  lastUpdateTime = millis();
 }
 
 void loop() 
@@ -64,6 +74,19 @@ void loop()
     client.stop();
   }
 
+  // if the temperature is more than the hysteresis above the set point.
+  if (recentTemperature - setPoint > hysteresis)
+  {
+    // turn it off
+    digitalWrite(13, LOW);
+  }
+  // else if the temperature is less than the hysteresis below the set point,
+  else if (setPoint - recentTemperature > hysteresis)
+  {
+    // turn it on
+    digitalWrite(13, HIGH);
+  }
+  
   delay(50); // Poll every 50ms
 }
 
@@ -94,40 +117,49 @@ void process(YunClient client)
 
 void readSensors(YunClient client) 
 {
-  float temp = dht.readTemperature(true);
-  Bridge.put("temperature",String(temp));
+  recentTemperature = dht.readTemperature(true);
+  Bridge.put("temperature",String(recentTemperature));
+
+  unsigned long uptime_ms = millis();
+  Bridge.put("uptime_ms", String(uptime_ms));
+
   float humidity = dht.readHumidity();
   Bridge.put("humidity", String(humidity));
+
   // Send feedback to client
   client.print(F("{\n"));
   client.print(F("  \"uptime_ms\" : "));
-  unsigned long uptime_ms = millis();
   client.print(uptime_ms);
-  Bridge.put("uptime_ms", String(uptime_ms));
   client.print(F(",\n"));
   client.print(F("  \"temperature\" : "));
-  client.print(temp);
-  client.print(F(",\n"));
-  client.print(F("  \"heat\" : "));
-  client.print(digitalRead(13));
+  client.print(recentTemperature);
   client.print(F(",\n"));
   client.print(F("  \"humidity\": "));
   client.print(humidity);
+  client.print(F(",\n"));
+  client.print(F("  \"setPoint\" : "));
+  client.print(setPoint);
+  client.print(F(",\n"));
+  client.print(F("  \"lastUpdateTime\" : "));
+  client.print(millis() - lastUpdateTime);
+  client.print(F(",\n"));
+  client.print(F("  \"heat\" : "));
+  client.print(digitalRead(13));
   client.println(F("\n}"));
+
+  // restart this timer
+  lastUpdateTime = millis();
+
 }
 
 void heatCommand(YunClient client) 
 {
-  int on;
-  
   // Read desired state
-  on = client.parseInt();
-
-  digitalWrite(13, on);
+  setPoint = client.parseFloat();
 
   // Send feedback to client
-  client.print(F("The heat is ... "));
-  client.println((on == 1 ? F("On") : F("Off")));
-  Bridge.put("heat",String(on));
+  client.print(F("The setPoint is ... "));
+  client.println(setPoint);
+  Bridge.put("setPoint",String(setPoint));
 }
 
