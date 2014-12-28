@@ -54,7 +54,7 @@
                 <div data-role="collapsible">
                     <h1>System Health</h1>
                     <h4>Uptime: <span id="uptime_number">?</span></h4>
-                    <div id="uptimePlaceholder" class="plot-placeholder"></div>
+                    <div id="healthPlaceholder" class="plot-placeholder"></div>
                     <div id="healthLegend"      class="legend-placeholder ui-body-inherit"></div>
                 </div>
 
@@ -95,7 +95,7 @@
                     }
                 ];
             
-                var uptimePlotData =
+                var healthPlotData =
                 [
                     {
                         label: "Arduino",
@@ -140,9 +140,9 @@
                         }
                     });
             
-                var uptimePlot = $.plot(
-                    $("#uptimePlaceholder"),
-                    uptimePlotData, 
+                var healthPlot = $.plot(
+                    $("#healthPlaceholder"),
+                    healthPlotData, 
                     {
                         series:
                         {
@@ -184,16 +184,16 @@
                         tempPlotData[0].data.push([data.time,data.temperature]);
                         tempPlotData[1].data.push([data.time,data.humidity]);
                         tempPlotData[2].data.push([data.time,data.heat]);
-                        uptimePlotData[0].data.push([data.time,data.uptime_ms]);
-                        uptimePlotData[1].data.push([data.time,data.py_uptime_ms]);
+                        healthPlotData[0].data.push([data.time,data.uptime_ms]);
+                        healthPlotData[1].data.push([data.time,data.py_uptime_ms]);
                                     
                         tempPlot.setData(tempPlotData);
                         tempPlot.setupGrid();
                         tempPlot.draw();
                         
-                        uptimePlot.setData(uptimePlotData);
-                        uptimePlot.setupGrid();
-                        uptimePlot.draw();
+                        healthPlot.setData(healthPlotData);
+                        healthPlot.setupGrid();
+                        healthPlot.draw();
                         
                         // Update the UI.
                         $('#temperature').text(data.temperature.toPrecision(3));
