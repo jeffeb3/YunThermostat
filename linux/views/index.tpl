@@ -98,12 +98,8 @@
                 var healthPlotData =
                 [
                     {
-                        label: "Arduino",
-                        data: {{arduinoUptimePlotData}}
-                    },
-                    {
-                        label: "Linux",
-                        data: {{linuxUptimePlotData}}
+                        label: "Update Time",
+                        data: {{updateTimePlotData}}
                     }
                 ];
             
@@ -162,7 +158,8 @@
                         },
                         yaxis:
                         {
-                            tickFormatter: msToText
+                            tickFormatter: msToText,
+                            min : 0
                         },
                         legend:
                         {
@@ -184,8 +181,7 @@
                         tempPlotData[0].data.push([data.time,data.temperature]);
                         tempPlotData[1].data.push([data.time,data.humidity]);
                         tempPlotData[2].data.push([data.time,data.heat]);
-                        healthPlotData[0].data.push([data.time,data.uptime_ms]);
-                        healthPlotData[1].data.push([data.time,data.py_uptime_ms]);
+                        healthPlotData[0].data.push([data.time,data.lastUpdateTime]);
                                     
                         tempPlot.setData(tempPlotData);
                         tempPlot.setupGrid();
@@ -244,8 +240,12 @@
                     minutes -= hours * 60.0;
                     var days = Math.floor(hours / 24.0);
                     hours -= days * 24.0;
-                    
-                    var text = hours.toString() + ':' + minutes.toString() + ':' + seconds.toPrecision(3).toString();
+
+                    var text = seconds.toPrecision(3).toString();
+                    if (minutes > 0 || hours > 0 || days > 0)
+                    {
+                        text = hours.toString() + ':' + minutes.toString() + ':' + text;
+                    }
                     if (days > 0)
                     {
                         text = days.toString() + 'd ' + text;
