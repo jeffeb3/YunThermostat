@@ -1,4 +1,5 @@
 
+
 .plot-placeholder
 {
     width : 100%;
@@ -10,3 +11,10 @@
 {
     padding-right: 10px;
 }
+
+/* Things in this class are hidden until we connect */
+.connected
+{
+    display : none;
+}
+

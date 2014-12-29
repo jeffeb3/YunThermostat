@@ -28,7 +28,7 @@ import copy
 
 # Import flask library.
 from bottle import run, Bottle, PasteServer
-from bottle import route, static_file, template, response
+from bottle import route, static_file, template, response, request
 
 web = Bottle()
 
@@ -37,6 +37,8 @@ plotData = []
 plotDataLock = threading.RLock()
 currentMeasurement = None
 currentMeasurementLock = threading.RLock()
+settings = {}
+settingsLock = threading.RLock()
 
 def uptime():
     ''' get this system's seconds since starting '''    
@@ -69,7 +71,7 @@ class QueryThread(threading.Thread):
                 currentMeasurement = data
 
             # Calculate what the set point should be
-            setPoint = 71.0 # degrees F
+            setPoint = 67.0 # degrees F
             
             # send the set point to the arduino
             urllib2.urlopen("http://10.0.2.208/arduino/heat/" + str(setPoint))
@@ -119,6 +121,17 @@ def root():
     # replace parts of views/index.tpl with the information in the indexInformation dictionary.
     return template('index', **indexInformation)
 
+@web.route('/action', method='POST')
+def action():
+    ''' This method gets called from the ajaz calls in javascript to do things from the forms. '''
+    id = request.forms.get('id')
+
+    if id == "doHeat":
+        print 'doHeat = ',request.forms.get('value')
+        with settingsLock:
+            settings["doHeat"] = bool(request.forms.get('value'))
+    
+
 def getUpdaterInfo():
     ''' returns a dictionary with variables defined for the updater template.'''
     # store this information in key-value pairs so that the template engine can find them.
@@ -156,6 +169,9 @@ def JavascriptCallback(path):
     
     if path == "updater.js":
         return template('updater', **getUpdaterInfo())
+    
+    if path == "forms.js":
+        return template('forms', **getUpdaterInfo())
     
     ''' Just return any files in the javascript folder. '''
     return static_file('javascript/'+path, root='.')

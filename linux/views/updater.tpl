@@ -3,15 +3,18 @@
 //! @note This file is a SimpleTemplate file (http://bottlepy.org/docs/dev/stpl.html)
 //! It is meant to be used with bottle, and won't load on it's own.
 
+// *************** don't do this stuff until the page completely loads
 $(document).ready(function()
-{
-    // This is to debug problems with the javascript.
+{    
+
+    // *************** This is to debug problems with the javascript.
     window.onerror = function(msg, url, linenumber)
     {
         alert('Error message: '+msg+'\nURL: '+url+'\nLine Number: '+linenumber);
         return true;
     }
-
+    
+    // *************** globals
     var tempPlotData =
     [
         {
@@ -30,7 +33,7 @@ $(document).ready(function()
             yaxis: 3
         }
     ];
-
+    
     var healthPlotData =
     [
         {
@@ -38,8 +41,16 @@ $(document).ready(function()
             data: {{updateTimePlotData}}
         }
     ];
+    
+    var tempPlot = null;
+    var healthPlot = null;
 
-    var tempPlot = $.plot(
+    // *************** Initial GUI updates
+    $("#heatStatus").hide();
+
+    // *************** Initialize the plots
+    
+    tempPlot = $.plot(
         $("#tempPlaceholder"),
         tempPlotData,
         { 
@@ -72,7 +83,7 @@ $(document).ready(function()
             }
         });
 
-    var healthPlot = $.plot(
+    healthPlot = $.plot(
         $("#healthPlaceholder"),
         healthPlotData, 
         {
@@ -104,9 +115,6 @@ $(document).ready(function()
             }
         });
 
-    // hide this, initially
-    $("#heatStatus").hide()
-    
     var lastMeasureTime = 0.0;
     function updateMeasurement(data)
     {
@@ -155,47 +163,48 @@ $(document).ready(function()
     server.onopen = function(e)
     {
         // Hide connecting status and show controls.
-        $('.status').hide();
-        $('#now').show();
+        $('.disconnected').hide();
+        $('.connected').show();
         $('#now').text('Now');
     };
     server.onerror = function(e)
     {      
         // Hide controls and show connecting status.
         $('.status h3').text('Connecting...');
-        $('.status').show();
-        $('#now').hide();
+        $('.disconnected').show();
+        $('.connected').hide();
     };
-
-    function msToText(milliseconds)
-    {
-        var seconds = milliseconds / 1000.0;
-        var minutes = Math.floor(seconds / 60.0);
-        seconds -= minutes * 60.0;
-        var hours = Math.floor(minutes / 60.0);
-        minutes -= hours * 60.0;
-        var days = Math.floor(hours / 24.0);
-        hours -= days * 24.0;
-
-        var text = seconds.toPrecision(3).toString();
-        if (minutes > 0 || hours > 0 || days > 0)
-        {
-            text = hours.toString() + ':' + minutes.toString() + ':' + text;
-        }
-        if (days > 0)
-        {
-            text = days.toString() + 'd ' + text;
-        }
-        return text;
-    }
-    function humidityPercent(humidity, axis)
-    {
-        return humidity.toFixed(axis.tickDecimals) + "%";
-    }
-    
-    function temperatureDeg(temperature, axis)
-    {
-        return temperature.toFixed(axis.tickDecimals) + "F";
-    }
-
 });
+
+function msToText(milliseconds)
+{
+    var seconds = milliseconds / 1000.0;
+    var minutes = Math.floor(seconds / 60.0);
+    seconds -= minutes * 60.0;
+    var hours = Math.floor(minutes / 60.0);
+    minutes -= hours * 60.0;
+    var days = Math.floor(hours / 24.0);
+    hours -= days * 24.0;
+
+    var text = seconds.toPrecision(3).toString();
+    if (minutes > 0 || hours > 0 || days > 0)
+    {
+        text = hours.toString() + ':' + minutes.toString() + ':' + text;
+    }
+    if (days > 0)
+    {
+        text = days.toString() + 'd ' + text;
+    }
+    return text;
+}
+
+function humidityPercent(humidity, axis)
+{
+    return humidity.toFixed(axis.tickDecimals) + "%";
+}
+
+function temperatureDeg(temperature, axis)
+{
+    return temperature.toFixed(axis.tickDecimals) + "F";
+}
+
