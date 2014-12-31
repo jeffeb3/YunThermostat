@@ -34,11 +34,11 @@
                 
                 <h3 class="status disconnected">Connecting...</h3>
 
-                <a href="#heatOverridePopup" data-rel="popup" class="ui-btn heat" id="heatOverride">Heat to: <span class="heatSetPoint">68&degF</span> <span id="heatStatus" style="color:#FF4444"> ... ON!</span></a>
-                <a href="#coolOverridePopup" data-rel="popup" class="ui-btn cool" id="coolOverride">Cool to: <span class="coolSetPoint">68&degF</span> <span id="coolStatus" style="color:#4444FF"> ... ON!</span></a>
+                <a href="#heatOverridePopup" data-rel="popup" class="ui-btn heat" id="heatOverride">Heat to: <span class="heatSetPoint">?</span>&degF <span id="heatStatus" style="color:#FF4444"> ... ON!</span></a>
+                <a href="#coolOverridePopup" data-rel="popup" class="ui-btn cool" id="coolOverride">Cool to: <span class="coolSetPoint">?</span>&degF <span id="coolStatus" style="color:#4444FF"> ... ON!</span></a>
 
                 <div data-role="popup" id="heatOverridePopup" class="ui-content">
-                    <h3><span class="heatSetPoint">68&degF</span></h3>
+                    <h3><span class="heatSetPoint">?</span>&degF</h3>
                     <div data-role="controlgroup" data-type="horizontal">
                         <label for="heatOverrideEnable">Override</label>
                         <input type="checkbox" id="heatOverrideEnable" name="heatOverrideEnable"/>
@@ -48,7 +48,7 @@
                 </div>
                 
                 <div data-role="popup" id="coolOverridePopup" class="ui-content">
-                    <h3><span class="coolSetPoint">68&degF</span></h3>
+                    <h3><span class="coolSetPoint">?</span>&degF</h3>
                     <div data-role="controlgroup" data-type="horizontal">
                         <label for="coolOverrideEnable">Override</label>
                         <input type="checkbox" id="coolOverrideEnable" name="coolOverrideEnable"/>
@@ -63,7 +63,7 @@
                     <div id="tempLegend"      class="legend-placeholder ui-body-inherit"></div>
                 </div>
 
-                <div data-role="collapsible">
+                <div data-role="collapsible" data-collapsed="false">
                     <h1>System Health</h1>
                     <h4>Uptime: <span id="uptime_number">?</span></h4>
                     <div id="healthPlaceholder" class="plot-placeholder"></div>
@@ -76,11 +76,12 @@
             
         </div>
 
-        <div data-role="page" id="ConfigurePage" data-theme="b">
+        <form data-role="page" id="ConfigurePage" data-theme="b" action="/settings" method="post">
             
             <div data-role="header">
-                <a href="#ContentsPage" class="ui-btn ui-icon-check ui-btn-icon-left ui-btn-icon-notext">Home</a>
+                <a href="#ContentsPage" onclick="$('#ConfigurePage').submit()" class="ui-btn ui-icon-check ui-btn-icon-left ui-btn-icon-notext">Save</a>
                 <h1>Configuration</h1>
+                <a href="#ContentsPage" id="ConfigurePageResetButton" class="ui-btn ui-icon-delete ui-btn-icon-right ui-btn-icon-notext">Save</a>
             </div>
             
             <div data-role="main" class="ui-content">
@@ -88,9 +89,9 @@
                 <div data-role="collapsible" data-collapsed="true">
                     <h1>General</h1>
                     <label for="doHeat">Enable Heat:</label>
-                    <input type="checkbox" data-role="flipswitch" name="doHeat" id="doHeat" value="doHeat">
+                    <input type="checkbox" data-role="flipswitch" name="doHeat" id="doHeat" value=1 checked="true">
                     <label for="doCool">Enable A/C:</label>
-                    <input type="checkbox" data-role="flipswitch" name="doCool" id="doCool" value="doCool">
+                    <input type="checkbox" data-role="flipswitch" name="doCool" id="doCool" value=1 checked="true">
                 </div>
 
                 <div data-role="collapsible">
@@ -98,50 +99,55 @@
                     <ul data-role="listview" data-inset="true" class="heat">
                         <li data-role="list-divider">Heater</li>
                         <li>
-                            <label for="tempComfortable">Comfortable Heat Temperature:</label>
-                            <input type="range" name="tempComfortable" id="tempComfortable" value="72" min="60" max="80">
+                            <label for="heatTempComfortable">Comfortable Heat Temperature:</label>
+                            <input type="range" name="heatTempComfortable" id="heatTempComfortable" value="{{settings['heatTempComfortable']}}" min="60" max="80">
                         </li>
                         <li>
-                            <label for="tempSleeping">Sleeping Heat Temperature:</label>
-                            <input type="range" name="tempSleeping" id="tempSleeping" value="72" min="60" max="80">
+                            <label for="heatTempSleeping">Sleeping Heat Temperature:</label>
+                            <input type="range" name="heatTempSleeping" id="heatTempSleeping" value="{{settings['heatTempSleeping']}}" min="60" max="80">
                         </li>
                         <li>
-                            <label for="tempAway">Away Heat Temperature:</label>
-                            <input type="range" name="tempAway" id="tempAway" value="72" min="60" max="80">
+                            <label for="heatTempAway">Away Heat Temperature:</label>
+                            <input type="range" name="heatTempAway" id="heatTempAway" value="{{settings['heatTempAway']}}" min="60" max="80">
                         </li>
                     </ul>
                     <ul data-role="listview" data-inset="true" class="cool">
                         <li data-role="list-divider">Air Conditioner</li>
                         <li>
-                            <label for="tempComfortable">Comfortable Cool Temperature:</label>
-                            <input type="range" name="tempComfortable" id="tempComfortable" value="72" min="60" max="80">
+                            <label for="coolTempComfortable">Comfortable Cool Temperature:</label>
+                            <input type="range" name="coolTempComfortable" id="coolTempComfortable" value="{{settings['coolTempComfortable']}}" min="60" max="80">
                         </li>
                         <li>
-                            <label for="tempSleeping">Sleeping Cool Temperature:</label>
-                            <input type="range" name="tempSleeping" id="tempSleeping" value="72" min="60" max="80">
+                            <label for="coolTempSleeping">Sleeping Cool Temperature:</label>
+                            <input type="range" name="coolTempSleeping" id="coolTempSleeping" value="{{settings['coolTempSleeping']}}" min="60" max="80">
                         </li>
                         <li>
-                            <label for="tempAway">Away Cool Temperature:</label>
-                            <input type="range" name="tempAway" id="tempAway" value="72" min="60" max="80">
+                            <label for="coolTempAway">Away Cool Temperature:</label>
+                            <input type="range" name="coolTempAway" id="coolTempAway" value="{{settings['coolTempAway']}}" min="60" max="80">
                         </li>
                     </ul>
                 </div>
 
                 <div data-role="collapsible" data-collapsed="true">
                     <h1>Email Alerts</h1>
-                    <label for="switch">Enable Email Alerts:</label>
-                    <input type="checkbox" data-role="flipswitch" name="switch" id="switch">
-                    <label for="smtp" class="ui-hidden-accessible">SMTP Address:</label>
-                    <input type="text" name="smtp" id="smtp" placeholder="SMTP ex: smtp.gmail.com" data-clear-btn="true">
-                    <label for="email" class="ui-hidden-accessible">Email Address:</label>
-                    <input type="text" name="email" id="email" placeholder="Email Address" data-clear-btn="true">
-                    <label for="email_pswd" class="ui-hidden-accessible">Password:</label>
-                    <input type="password" name="email_passw" id="email_pswd" placeholder="Password" data-clear-btn="true">
-                    <a href="#" class="ui-btn ui-btn-inline">Test Email</a>
-                    <label for="email_restart">On Restart</label>
-                    <input type="checkbox" name="email_restart" id="email_restart" value="email_restart">
-                    <label for="email_oor">On Out of Range</label>
-                    <input type="checkbox" name="email_oor" id="email_oor" value="email_oor">
+                    <label for="doEmail">Enable Email Alerts:</label>
+                    <input type="checkbox" data-role="flipswitch" name="doEmail" value=1 id="doEmail"></input>
+                    <div class="email-settings">
+                        <label for="smtp" class="email-settings">SMTP Address:</label>
+                        <input type="text" name="smtp" class="email-settings" id="smtp" placeholder="SMTP ex: smtp.gmail.com:587" data-clear-btn="true">
+                        <label for="email_from" class="email-settings">From Email Address:</label>
+                        <input type="text" name="email_from" class="email-settings" id="email_from" placeholder="Email Address" data-clear-btn="true">
+                        <label for="email_to" class="email-settings">To Email Addresses (comma separated):</label>
+                        <input type="text" name="email_to" class="email-settings" id="email_to" placeholder="Email Addresses (comma delimited)" data-clear-btn="true">
+                        <label for="email_pswd" class="email-settings ui-hidden-accessible">Password:</label>
+                        <input type="password" name="email_passw" class="email-settings" id="email_pswd" placeholder="Password" data-clear-btn="true">
+                        <a href="#ConfigurePage" class="email-settings ui-btn ui-btn-inline" id="email_test">Test Email</a>
+                        <h4 id="email_response">Testing...</h4>
+                        <label for="email_restart" class="email-settings">On Restart</label>
+                        <input type="checkbox" name="email_restart" class="email-settings" id="email_restart" value=1>
+                        <label for="email_oor" class="email-settings">On Out of Range</label>
+                        <input type="checkbox" name="email_oor" class="email-settings" id="email_oor" value=1></input>
+                    </div>
                 </div>
 
                 <div data-role="collapsible" data-collapsed="true">
@@ -151,8 +157,7 @@
             </div>
             
             <div data-role="footer"><h1></h1></div>
-            
-        </div>
 
+        </form>
     </body>
 </html>

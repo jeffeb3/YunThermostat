@@ -145,6 +145,9 @@ void readSensors(YunClient client)
   client.print(F(",\n"));
   client.print(F("  \"heat\" : "));
   client.print(digitalRead(13));
+  client.print(F(",\n"));
+  client.print(F("  \"cool\" : "));
+  client.print(false);
   client.println(F("\n}"));
 
   // restart this timer

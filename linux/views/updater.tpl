@@ -15,20 +15,20 @@ $(document).ready(function()
     }
     
     // *************** globals
-    var tempPlotData =
+    var temperaturePlotData =
     [
         {
             label: "Temp(&degF)",
-            data: {{tempPlotData}}
+            data: {{temperatureHistory}}
         },
         {
             label: "Humidity(%)",
-            data: {{humidPlotData}},
+            data: {{humidityHistory}},
             yaxis: 2
         },
         {
             label: "Heat On",
-            data: {{heatPlotData}},
+            data: {{heatHistory}},
             points: { show : false },
             yaxis: 3
         }
@@ -38,7 +38,17 @@ $(document).ready(function()
     [
         {
             label: "Update Time",
-            data: {{updateTimePlotData}}
+            data: {{updateTimeHistory}}
+        },
+        {
+            label: "Flappy Ping",
+            data: {{flappyPingHistory}},
+            yaxis: 2
+        },
+        {
+            label: "Phone Ping",
+            data: {{phonePingHistory}},
+            yaxis: 2
         }
     ];
     
@@ -47,24 +57,28 @@ $(document).ready(function()
 
     // *************** Initial GUI updates
     $("#heatStatus").hide();
+    $("#coolStatus").hide();
 
     // *************** Initialize the plots
     
     tempPlot = $.plot(
         $("#tempPlaceholder"),
-        tempPlotData,
+        temperaturePlotData,
         { 
-            xaxes: [ { mode: 'time' } ],
+            xaxes: [
+                    {
+                        ticks: 4,
+                        mode: 'time'
+                    }
+                    ],
             yaxes: [
             {
                 autoscaleMargin : 1.1,
                 tickFormatter : temperatureDeg,
-                //tickDecimals : 2
             },
             {
                 alignTicksWithAxis: 1,
                 tickFormatter : humidityPercent,
-                //tickDecimals : 2,
                 position: "right"
             },
             {
@@ -103,14 +117,21 @@ $(document).ready(function()
             {
                 mode: "time",
             },
-            yaxis:
+            yaxes: [
             {
                 tickFormatter: msToText,
                 min : 0
             },
+            {
+                alignTicksWithAxis: 1,
+                position: "right",
+                ticks: [[0,"Fail"], [1,"OK"]],
+                min: -0.1,
+                max: 1.1
+            }],
             legend:
             {
-                noColumns : 2,
+                noColumns : 3,
                 container : $("#healthLegend")
             }
         });
@@ -122,12 +143,14 @@ $(document).ready(function()
         {
             lastMeasureTime = data.time
             // Update the plots
-            tempPlotData[0].data.push([data.time,data.temperature]);
-            tempPlotData[1].data.push([data.time,data.humidity]);
-            tempPlotData[2].data.push([data.time,data.heat]);
+            temperaturePlotData[0].data.push([data.time,data.temperature]);
+            temperaturePlotData[1].data.push([data.time,data.humidity]);
+            temperaturePlotData[2].data.push([data.time,data.heat]);
             healthPlotData[0].data.push([data.time,data.lastUpdateTime]);
+            healthPlotData[1].data.push([data.time,data.flappy_ping]);
+            healthPlotData[2].data.push([data.time,data.phone_ping]);
                         
-            tempPlot.setData(tempPlotData);
+            tempPlot.setData(temperaturePlotData);
             tempPlot.setupGrid();
             tempPlot.draw();
             
@@ -149,6 +172,16 @@ $(document).ready(function()
             {
                 $("#heatStatus").show(1000);
             }
+            if (data.cool == 0)
+            {
+                $("#coolStatus").hide(1000);
+            }
+            else
+            {
+                $("#coolStatus").show(1000);
+            }
+            $(".heatSetPoint").text(data.setPoint.toPrecision(3));
+            $(".coolSetPoint").text(data.setPoint.toPrecision(3)); // TODO, make a different set point for cooling.
         }
     }
     
@@ -205,6 +238,6 @@ function humidityPercent(humidity, axis)
 
 function temperatureDeg(temperature, axis)
 {
-    return temperature.toFixed(axis.tickDecimals) + "F";
+    return temperature.toFixed(axis.tickDecimals) + "&degF";
 }
 

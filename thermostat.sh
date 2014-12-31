@@ -1,6 +1,7 @@
 #!/bin/sh
 
 cd /usr/local/bin/thermostat
-echo Starting Thermostat.py
-./Thermostat.py
 
+echo Starting the Thermostat > /root/status.txt
+
+./Thermostat.py
