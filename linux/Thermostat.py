@@ -110,8 +110,8 @@ class QueryThread(threading.Thread):
             data = json.load(urllib2.urlopen("http://10.0.2.208/arduino/sensors"));
             data["time"] = (time.time() - time.timezone) * 1000.0
             data["py_uptime_ms"] = uptime() * 1000.0
-            data["flappy_ping"] = isPinging("10.0.2.219")
-            data["phone_ping"] = isPinging("10.0.2.222")
+            data["flappy_ping"] = False #isPinging("10.0.2.219")
+            data["phone_ping"] = False #isPinging("10.0.2.222")
 
             with plotDataLock:
                 global plotData
