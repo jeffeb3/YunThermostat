@@ -18,18 +18,25 @@
 #include <YunServer.h>
 #include <YunClient.h>
 #include <DHT.h>
+#include <LiquidCrystal.h>
+
 
 // Listen on default port 5555, the webserver on the Yún
 // will forward there all the HTTP requests for us.
 YunServer server;
 
+// Set pins used in LCD display
+LiquidCrystal lcd(8, 9, 4, 5, 6, 7);
 #define DHTPIN 10
 
 DHT dht(DHTPIN, DHT22);
 
+//set initial settings
 float setPoint = 72.0;
 float hysteresis = 1.0;
 float recentTemperature = 72.0;
+float humidity = 10.0;
+int setOverride = 0;
 
 // The amount of time since the last temperature update.
 unsigned long lastUpdateTime = 0;
@@ -58,10 +65,53 @@ void setup()
   
   // restart this timer, now that the arduino is up.
   lastUpdateTime = millis();
+  
+  // set up the LCD's number of columns and rows:
+  lcd.begin(16, 2);
+
 }
 
 void loop() 
 {
+  // Do LCD display stuff
+  lcd.setCursor(0,0);
+  lcd.print("T:");
+  recentTemperature = dht.readTemperature(true);
+  lcd.print(recentTemperature);
+  lcd.print(" set:");
+  lcd.print(setPoint);
+  lcd.setCursor(0,1);
+  lcd.print("H:");
+  humidity = dht.readHumidity();
+  lcd.print(humidity);
+  
+  // Manual override with buttons
+  int keypress;
+  keypress = analogRead (0);
+  if (keypress < 60) {
+  }
+  else if (keypress < 200) {
+    setPoint = setPoint + 1;
+    setOverride = 1;
+    lcd.setCursor(8,1);
+    lcd.print ("OVERRIDE");
+  }
+  else if (keypress < 400){
+    setPoint = setPoint - 1;
+    setOverride = 1;      
+    lcd.setCursor(8,1);
+    lcd.print ("OVERRIDE");
+  }
+  else if (keypress < 600){
+  }
+  else if (keypress < 800){
+    // need to get setPoint from Linux here
+    setOverride = 0;        
+    lcd.setCursor(8,1);
+    lcd.print ("        ");
+  }
+
+  
   // Get clients coming from server
   YunClient client = server.accept();
 
@@ -87,7 +137,7 @@ void loop()
     digitalWrite(13, HIGH);
   }
   
-  delay(50); // Poll every 50ms
+  delay(200); // Poll every 200ms
 }
 
 void process(YunClient client) 
@@ -139,6 +189,9 @@ void readSensors(YunClient client)
   client.print(F(",\n"));
   client.print(F("  \"setPoint\" : "));
   client.print(setPoint);
+  client.print(F(",\n"));
+  client.print(F("  \"setOverride\" : "));
+  client.print(setOverride);
   client.print(F(",\n"));
   client.print(F("  \"lastUpdateTime\" : "));
   client.print(millis() - lastUpdateTime);
