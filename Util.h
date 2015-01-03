@@ -44,7 +44,7 @@ unsigned long BridgeGetULong(const char* pName)
     
     Bridge.get(pName, buffer, 20);
     
-    return atoi(buffer);
+    return atol(buffer);
 }
 
 // call Bridge.Get(pName,...) and convert the response to a bool
