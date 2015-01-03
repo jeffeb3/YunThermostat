@@ -33,9 +33,11 @@ DHT dht(DHTPIN, DHT22);
 
 //set initial settings
 float setPoint = 72.0;
-float hysteresis = 1.0;
+float hysteresis = 0.4;
 float recentTemperature = 72.0;
 float humidity = 10.0;
+const float temperatureLPF = 0.5;
+const float humidityLFP = 0.5;
 int setOverride = 0;
 
 // The amount of time since the last temperature update.
@@ -43,6 +45,13 @@ unsigned long lastUpdateTime = 0;
 
 void setup() 
 {
+  // set up the LCD's number of columns and rows:
+  lcd.begin(16, 2);
+  lcd.setCursor(0,0);
+  lcd.print("Waiting for the");
+  lcd.setCursor(0,1);
+  lcd.print("Bridge");
+
   // Bridge startup, make the L13 LED go on, then initialize, then off.
   pinMode(13, OUTPUT);
   digitalWrite(13, HIGH);
@@ -63,12 +72,14 @@ void setup()
   server.listenOnLocalhost();
   server.begin();
   
+  lcd.setCursor(0,0);
+  lcd.print("                ");
+  lcd.setCursor(0,1);
+  lcd.print("                ");
+
   // restart this timer, now that the arduino is up.
   lastUpdateTime = millis();
   
-  // set up the LCD's number of columns and rows:
-  lcd.begin(16, 2);
-
 }
 
 void loop() 
@@ -76,14 +87,22 @@ void loop()
   // Do LCD display stuff
   lcd.setCursor(0,0);
   lcd.print("T:");
-  recentTemperature = dht.readTemperature(true);
-  lcd.print(recentTemperature);
+
+  recentTemperature = smooth(dht.readTemperature(true), temperatureLPF, recentTemperature);
+  if (isnan(recentTemperature))
+  {
+    recentTemperature = 32.0;
+  }
+  Bridge.put("temperature",String(recentTemperature));
+  humidity = smooth(dht.readHumidity(), humidityLFP, humidity);
+  Bridge.put("humidity", String(humidity));
+  
+  lcd.print(recentTemperature, 1);
   lcd.print(" set:");
-  lcd.print(setPoint);
+  lcd.print(setPoint, 1);
   lcd.setCursor(0,1);
   lcd.print("H:");
-  humidity = dht.readHumidity();
-  lcd.print(humidity);
+  lcd.print(humidity, 1);
   
   // Manual override with buttons
   int keypress;
@@ -94,13 +113,13 @@ void loop()
     setPoint = setPoint + 1;
     setOverride = 1;
     lcd.setCursor(8,1);
-    lcd.print ("OVERRIDE");
+    lcd.print ("OVER");
   }
   else if (keypress < 400){
     setPoint = setPoint - 1;
     setOverride = 1;      
     lcd.setCursor(8,1);
-    lcd.print ("OVERRIDE");
+    lcd.print ("OVER");
   }
   else if (keypress < 600){
   }
@@ -108,7 +127,7 @@ void loop()
     // need to get setPoint from Linux here
     setOverride = 0;        
     lcd.setCursor(8,1);
-    lcd.print ("        ");
+    lcd.print ("    ");
   }
 
   
@@ -116,7 +135,8 @@ void loop()
   YunClient client = server.accept();
 
   // There is a new client?
-  if (client) {
+  if (client)
+  {
     // Process request
     process(client);
 
@@ -137,7 +157,13 @@ void loop()
     digitalWrite(13, HIGH);
   }
   
-  delay(200); // Poll every 200ms
+  if ((millis() - lastUpdateTime) > 180 * 1000)
+  {
+    // It's been over three minutes since we heard from the python script
+    lcd.setCursor(15,1);
+    lcd.print("?");
+  }
+  delay(2000); // Poll every 200ms
 }
 
 void process(YunClient client) 
@@ -167,14 +193,8 @@ void process(YunClient client)
 
 void readSensors(YunClient client) 
 {
-  recentTemperature = dht.readTemperature(true);
-  Bridge.put("temperature",String(recentTemperature));
-
   unsigned long uptime_ms = millis();
   Bridge.put("uptime_ms", String(uptime_ms));
-
-  float humidity = dht.readHumidity();
-  Bridge.put("humidity", String(humidity));
 
   // Send feedback to client
   client.print(F("{\n"));
@@ -217,5 +237,31 @@ void heatCommand(YunClient client)
   client.print(F("The setPoint is ... "));
   client.println(setPoint);
   Bridge.put("setPoint",String(setPoint));
+  lcd.setCursor(15,1);
+  if (millis() % 60000 < 30000)
+  {
+    lcd.print("+");
+  }
+  else
+  {
+    lcd.print("X");
+  }
 }
+
+float smooth(float data, float filterVal, float smoothedVal)
+{
+  if (filterVal > 0.99)
+  {      // check to make sure param's are within range
+    filterVal = .99;
+  }
+  else if (filterVal <= 0)
+  {
+    filterVal = 0;
+  }
+
+  smoothedVal = (data * (1 - filterVal)) + (smoothedVal  *  filterVal);
+
+  return smoothedVal;
+}
+
 
