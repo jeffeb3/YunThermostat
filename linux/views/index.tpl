@@ -96,37 +96,54 @@
 
                 <div data-role="collapsible">
                     <h1>Temperatures</h1>
-                    <ul data-role="listview" data-inset="true" class="heat">
-                        <li data-role="list-divider">Heater</li>
+                    <ul data-role="listview" data-inset="true">
+                        <li data-role="list-divider">Temerature Presets</li>
                         <li>
-                            <label for="heatTempComfortable">Comfortable Heat Temperature:</label>
-                            <input type="range" name="heatTempComfortable" id="heatTempComfortable" value="{{settings['heatTempComfortable']}}" min="60" max="80">
+                            <div data-role="rangeslider">
+                                <label for="heatTempComfortable">Comfortable Temperature:</label>
+                                <input type="range" name="heatTempComfortable" id="heatTempComfortable" value="{{settings['heatTempComfortable']}}" min="60" max="80">
+                                <input type="range" name="coolTempComfortable" id="coolTempComfortable" value="{{settings['coolTempComfortable']}}" min="60" max="80">
+                            </div>
                         </li>
                         <li>
-                            <label for="heatTempSleeping">Sleeping Heat Temperature:</label>
-                            <input type="range" name="heatTempSleeping" id="heatTempSleeping" value="{{settings['heatTempSleeping']}}" min="60" max="80">
+                            <div data-role="rangeslider">
+                                <label for="heatTempSleeping">Sleeping Temperature:</label>
+                                <input type="range" name="heatTempSleeping" id="heatTempSleeping" value="{{settings['heatTempSleeping']}}" min="60" max="80">
+                                <input type="range" name="coolTempSleeping" id="coolTempSleeping" value="{{settings['coolTempSleeping']}}" min="60" max="80">
+                            </div>
                         </li>
                         <li>
-                            <label for="heatTempAway">Away Heat Temperature:</label>
-                            <input type="range" name="heatTempAway" id="heatTempAway" value="{{settings['heatTempAway']}}" min="60" max="80">
-                        </li>
-                    </ul>
-                    <ul data-role="listview" data-inset="true" class="cool">
-                        <li data-role="list-divider">Air Conditioner</li>
-                        <li>
-                            <label for="coolTempComfortable">Comfortable Cool Temperature:</label>
-                            <input type="range" name="coolTempComfortable" id="coolTempComfortable" value="{{settings['coolTempComfortable']}}" min="60" max="80">
-                        </li>
-                        <li>
-                            <label for="coolTempSleeping">Sleeping Cool Temperature:</label>
-                            <input type="range" name="coolTempSleeping" id="coolTempSleeping" value="{{settings['coolTempSleeping']}}" min="60" max="80">
-                        </li>
-                        <li>
-                            <label for="coolTempAway">Away Cool Temperature:</label>
-                            <input type="range" name="coolTempAway" id="coolTempAway" value="{{settings['coolTempAway']}}" min="60" max="80">
+                            <div data-role="rangeslider">
+                                <label for="heatTempAway">Away Temperature:</label>
+                                <input type="range" name="heatTempAway" id="heatTempAway" value="{{settings['heatTempAway']}}" min="60" max="80">
+                                <input type="range" name="coolTempAway" id="coolTempAway" value="{{settings['coolTempAway']}}" min="60" max="80">
+                            </div>
                         </li>
                     </ul>
-                </div>
+               </div>
+
+                <div data-role="collapsible">
+                    <h1>Awake Times</h1>
+                    <ul data-role="listview" id="sleepTimes" data-inset="true">
+                        % for day in days:
+                        <li data-role="list-divider">{{day}}:</li>
+                        <li>
+                            <table><tbody><tr>
+                                <!-- OMG, this is driving me crazy! I'll just do it in python! -->
+                                <!-- TODO, redo this, again, it is toooooo hard to use-->
+                                <td><p class="morning-time">{{times[day + 'Morn']}}</p></td>
+                                <td width="100%">
+                                    <div data-role="rangeslider" data-mini="true" class="no-number">
+                                        <input type="range" name="{{day}}Morn"  id="{{day}}Morn"  data-mini="true" value="{{settings[day + 'Morn' ]}}" min="0" max="1439" step="5">
+                                        <input type="range" name="{{day}}Night" id="{{day}}Night" data-mini="true" value="{{settings[day + 'Night']}}" min="0" max="1439" step="5">
+                                    </div>
+                                </td>
+                                <td><p class="night-time">{{times[day + 'Night']}}</p></td>
+                            </tr></tbody></table>
+                        </li>
+                        % end
+                    </ul>
+               </div>
 
                 <div data-role="collapsible" data-collapsed="true">
                     <h1>Email Alerts</h1>

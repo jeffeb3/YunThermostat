@@ -22,3 +22,16 @@
 {
     display: none;
 }
+
+/* Used to remove the number next to the slider.*/
+.no-number .ui-slider-input
+{
+    display : none;
+    width: 0px;
+}
+
+/* Used to remove the space where the number was. */
+.no-number .ui-rangeslider-sliders
+{
+    margin: 0 5px; !important
+}

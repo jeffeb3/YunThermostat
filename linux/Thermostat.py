@@ -7,21 +7,27 @@
 # X style sheet (or just use mobile)
 # X Add humidity, and heat on to front page.
 # X Add time to front page
+# X Create file history of status/temps (csv?, shelf?)
 
-# - Create file history of status/temps (csv?, shelf?)
+# X hourly program format
+# X hourly program interface (jquery)
+
 # - Add ways to navigate the graph
 # - watchdogs on the atmega and the arm with reboots
 # - email alerts for resets/errors
-# - hourly program format
-# - hourly program interface (jquery)
 # - command line arguments
-
+# - Error handling, especially:
+#   - imports
+#   - urls
+#   - settings
 # - smart (ping) adjustments
+# ? dropbox integration.
 # - GPS fencing
 
 # Import system libraries.
 import threading
 import time
+import datetime
 import json
 import urllib2
 import os
@@ -37,8 +43,11 @@ from bottle import route, static_file, template, response, request
 
 # Import our email utility function
 from email_utils import sendemail
+#from daq import daq
 
 web = Bottle()
+
+days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
 
 # Shared data and locks
 plotData = []
@@ -54,6 +63,8 @@ try:
         print json.dumps(settings, sort_keys=True, indent=4)
 except:
     print 'Failure to load settings. Setting to defaults'
+    
+    # These are the initial settings for the configuration page.
     settings = {}
     settings["doHeat"] = True
     settings["doCool"] = True
@@ -73,11 +84,17 @@ except:
     settings["email_passw"] = ''
     settings["email_restart"] = True
     settings["email_oor"] = True
+
+    for day in days:
+        settings[day + "Night"] = 1320
+        settings[day + "Morn"] = 360
     
     with open('settings.json', 'w') as fp:
         json.dump(settings, fp, sort_keys=True, indent=4)
     
 settingsLock = threading.RLock()
+
+#dataAcq = daq(settings['email_from'], settings['email_passw'])
 
 def uptime():
     ''' get this system's seconds since starting '''    
@@ -92,6 +109,35 @@ def isPinging(host, max_tries = 10):
         if rv == 0: # zero means response
             return True
     return False
+
+def getSetTemperatureRange():
+    now = datetime.datetime.now()
+    day = days[(now.weekday() + 1) % 7] # python says 0 is Monday.
+    wakeUp = None
+    sleep = None
+    with settingsLock:
+        wakeUp = settings[day + 'Morn']
+        sleep = settings[day + 'Night']
+    
+    asleep = False
+    minutes = now.minute + 60*now.hour
+    if minutes < wakeUp:
+        # we are still asleep
+        asleep = True
+    elif minutes < sleep:
+        # we are just waking up
+        asleep = False
+    else:
+        # we went back to sleep
+        asleep = True
+    
+    with settingsLock:
+        if asleep:
+            return (settings["heatTempSleeping"], settings["coolTempSleeping"])
+        else:
+            return (settings["heatTempComfortable"], settings["coolTempComfortable"])
+
+        
 
 class QueryThread(threading.Thread):
     ''' This thread runs continuously regarless of the interaction with the user.'''
@@ -112,6 +158,8 @@ class QueryThread(threading.Thread):
             data["py_uptime_ms"] = uptime() * 1000.0
             data["flappy_ping"] = False #isPinging("10.0.2.219")
             data["phone_ping"] = False #isPinging("10.0.2.222")
+            
+            #dataAcq.append(data)
 
             with plotDataLock:
                 global plotData
@@ -123,8 +171,7 @@ class QueryThread(threading.Thread):
                 currentMeasurement = data
 
             # Calculate what the set point should be
-            with settingsLock:
-                setPoint = copy.copy(settings["heatTempComfortable"]) # degrees F
+            setPoint = getSetTemperatureRange()[0]
             
             # send the set point to the arduino
             urllib2.urlopen("http://10.0.2.208/arduino/heat/" + str(setPoint))
@@ -201,6 +248,20 @@ def email_test():
     
     return str(problems)
 
+def minutesToText(minutes):
+    minutes = int(minutes)
+    hours = int(minutes / 60) % 24
+    time = '';
+    if hours < 12:
+        time = "A";
+    else:
+        time = "P";
+    minutes = minutes % 60
+
+    hours = hours % 12
+
+    return '%d:%02d%s' % (hours, minutes, time)
+
 @web.route('/')
 def root():
     ''' Return the template, with the formatted data where the {{}} braces are.'''
@@ -209,9 +270,17 @@ def root():
     indexInformation = {}
 
     indexInformation["ipaddress"] = os.uname()[1]
-
+    
+    indexInformation["days"] = days
+    
     # replace parts of views/index.tpl with the information in the indexInformation dictionary.
     with settingsLock:
+        times = {}
+        for day in days:
+            times[day + 'Morn'] = minutesToText(settings[day + 'Morn'])
+            times[day + 'Night'] = minutesToText(settings[day + 'Night'])
+        indexInformation["times"] = times
+
         indexInformation["settings"] = copy.copy(settings)
     
     return template('index', **indexInformation)
@@ -249,6 +318,11 @@ def settings_post():
             settings["email_passw"] = request.forms.get('email_passw')
         settings["email_restart"] = bool(request.forms.get('email_restart', False))
         settings["email_oor"] = bool(request.forms.get('email_oor', False))
+
+        for day in days:
+            settings[day + "Morn"] = int(request.forms.get(day + "Morn"))
+            settings[day + "Night"] = int(request.forms.get(day + "Night"))
+            
         
         with open('settings.json', 'w') as fp:
             json.dump(settings, fp, sort_keys=True, indent=4)

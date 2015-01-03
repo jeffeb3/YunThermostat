@@ -94,4 +94,48 @@ $(document).ready(function()
             $("#email_response").text(data);
         });
     });
+
+    function minuteToText(minute)
+    {
+        var minutes = parseInt(minute % 60, 10);
+        var hours = parseInt(minute / 60 % 24, 10);
+        var time = null;
+        minutes = minutes + "";
+        if (hours < 12)
+        {
+            time = "A";
+        }
+        else
+        {
+            time = "P";
+        }
+
+        if (hours == 0)
+        {
+            hours = 12;
+        }
+
+        if (hours > 12)
+        {
+            hours = hours - 12;
+        }
+
+        if (minutes.length == 1)
+        {
+            minutes = "0" + minutes;
+        }
+
+        return hours + ":" + minutes + time;        
+    }
+    
+    function sliderTime()
+    {
+        var sliders = $(this).children("input");
+        var morning = minuteToText(sliders.first().val());
+        var night = minuteToText(sliders.last().val());
+        var row = $(this).closest("tr");
+        row.find(".morning-time").val(morning);
+        row.find(".night-time").text(night);
+    }
+    $(".no-number").change(sliderTime);
 });

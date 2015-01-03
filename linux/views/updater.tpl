@@ -115,6 +115,7 @@ $(document).ready(function()
             },
             xaxis:
             {
+                ticks: 4,
                 mode: "time",
             },
             yaxes: [
