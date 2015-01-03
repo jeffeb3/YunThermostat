@@ -108,7 +108,7 @@ class QueryThread(threading.Thread):
 
             # Get data from server.
             data = json.load(urllib2.urlopen("http://10.0.2.208/arduino/sensors"));
-            data["time"] = (time.time() - time.timezone) * 1000.0
+            data["time"] = time.time() * 1000.0
             data["py_uptime_ms"] = uptime() * 1000.0
             data["flappy_ping"] = False #isPinging("10.0.2.219")
             data["phone_ping"] = False #isPinging("10.0.2.222")
@@ -271,14 +271,14 @@ def getUpdaterInfo():
     with plotDataLock:
         #plotData = plotdData[-1000:] TODO
         for data in plotData[-1000:]: # clip to 1000 points, that should be enough for now
-            updaterInfo['temperatureHistory']   += '[ %f, %f],' % (data["time"], data["temperature"])
-            updaterInfo['humidityHistory']      += '[ %f, %f],' % (data["time"], data["humidity"])
-            updaterInfo['heatHistory']          += '[ %f, %d],' % (data["time"], data["heat"])
-            updaterInfo['updateTimeHistory']    += '[ %f, %d],' % (data["time"], data["lastUpdateTime"])
-            updaterInfo['arduinoUptimeHistory'] += '[ %f, %f],' % (data["time"], data["uptime_ms"])
-            updaterInfo['linuxUptimeHistory']   += '[ %f, %f],' % (data["time"], data["py_uptime_ms"])
-            updaterInfo['flappyPingHistory']    += '[ %f, %f],' % (data["time"], data["flappy_ping"])
-            updaterInfo['phonePingHistory']     += '[ %f, %f],' % (data["time"], data["phone_ping"])
+            updaterInfo['temperatureHistory']   += '[ %f, %f],' % (data["time"] - (time.timezone * 1000.0), data["temperature"])
+            updaterInfo['humidityHistory']      += '[ %f, %f],' % (data["time"] - (time.timezone * 1000.0), data["humidity"])
+            updaterInfo['heatHistory']          += '[ %f, %d],' % (data["time"] - (time.timezone * 1000.0), data["heat"])
+            updaterInfo['updateTimeHistory']    += '[ %f, %d],' % (data["time"] - (time.timezone * 1000.0), data["lastUpdateTime"])
+            updaterInfo['arduinoUptimeHistory'] += '[ %f, %f],' % (data["time"] - (time.timezone * 1000.0), data["uptime_ms"])
+            updaterInfo['linuxUptimeHistory']   += '[ %f, %f],' % (data["time"] - (time.timezone * 1000.0), data["py_uptime_ms"])
+            updaterInfo['flappyPingHistory']    += '[ %f, %f],' % (data["time"] - (time.timezone * 1000.0), data["flappy_ping"])
+            updaterInfo['phonePingHistory']     += '[ %f, %f],' % (data["time"] - (time.timezone * 1000.0), data["phone_ping"])
 
     # Add the outside brackets to each plot data.
     for key, value in updaterInfo.items():

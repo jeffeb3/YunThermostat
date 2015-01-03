@@ -143,12 +143,12 @@ $(document).ready(function()
         {
             lastMeasureTime = data.time
             // Update the plots
-            temperaturePlotData[0].data.push([data.time,data.temperature]);
-            temperaturePlotData[1].data.push([data.time,data.humidity]);
-            temperaturePlotData[2].data.push([data.time,data.heat]);
-            healthPlotData[0].data.push([data.time,data.lastUpdateTime]);
-            healthPlotData[1].data.push([data.time,data.flappy_ping]);
-            healthPlotData[2].data.push([data.time,data.phone_ping]);
+            temperaturePlotData[0].data.push([data.time - {{timezone}},data.temperature]);
+            temperaturePlotData[1].data.push([data.time - {{timezone}},data.humidity]);
+            temperaturePlotData[2].data.push([data.time - {{timezone}},data.heat]);
+            healthPlotData[0].data.push([data.time - {{timezone}},data.lastUpdateTime]);
+            healthPlotData[1].data.push([data.time - {{timezone}},data.flappy_ping]);
+            healthPlotData[2].data.push([data.time - {{timezone}},data.phone_ping]);
                         
             tempPlot.setData(temperaturePlotData);
             tempPlot.setupGrid();
@@ -162,7 +162,7 @@ $(document).ready(function()
             $('#temperature').text(data.temperature.toPrecision(3));
             $('#humidity').text(data.humidity.toPrecision(3));
             $('#uptime_number').text('Arduino: ' + msToText(data.uptime_ms) + ' Linux: ' + msToText(data.py_uptime_ms));
-            var now = new Date(data.time + {{timezone}});
+            var now = new Date(data.time);
             $('#now').text(now.toLocaleString());
             if (data.heat == 0)
             {
