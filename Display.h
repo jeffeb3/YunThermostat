@@ -23,11 +23,7 @@ public:
     inline void OnetimeDisplay(char* pFirstLine, char* pSecondLine);
     
     // This displays the current operating status of the Thermostat.
-    inline void StatusDisplay(float temperature,
-                              float humidity,
-                              float heatSetPoint,
-                              float coolSetPoint,
-                              bool override);
+    inline void StatusDisplay();
     
     inline int GetButton();
 
@@ -63,34 +59,32 @@ inline void Display::OnetimeDisplay(char* pFirstRow,
     lcd.print(pSecondRow);
 }
 
-inline void Display::StatusDisplay(float temperature,
-                                   float humidity,
-                                   float heatSetPoint,
-                                   float coolSetPoint,
-                                   bool override)
+inline void Display::StatusDisplay()
 {
     // Do LCD display stuff
     lcd.setCursor(0,0);
-    lcd.print("T:");
-    lcd.print(temperature, 1);
-    lcd.print(" H:");
-    lcd.print(humidity, 0);
-    lcd.setCursor(0,1);
-    lcd.print("set:");
-    lcd.print(heatSetPoint, 1);
-    lcd.print("-");
-    lcd.print(coolSetPoint, 1);
-    lcd.setCursor(12,0);
-    if (override)
+    lcd.print(F("T:"));
+    lcd.print(BridgeGetFloat("temperature"), 1);
+    if (BridgeGetBool("lcdOverride"))
     {
-        lcd.print ("OVER");
+        lcd.print (F(" OVERRIDE"));
     }
     else
     {
-        lcd.print ("    ");
+        lcd.setCursor(12,0);
+        lcd.print(F("    "));
+        lcd.setCursor(6,0);
+        lcd.print(F(" H:"));
+        lcd.print(BridgeGetFloat("humidity"), 0);
+        lcd.print(F("%"));
     }
+    lcd.setCursor(0,1);
+    lcd.print(F("set:"));
+    lcd.print(BridgeGetFloat("heatSetPoint"), 1);
+    lcd.print(F("-"));
+    lcd.print(BridgeGetFloat("coolSetPoint"), 1);
 
-    unsigned long pythonUpdateMillis = BridgeGetULong("pytonUpdateTime");
+    unsigned long pythonUpdateMillis = BridgeGetULong("pythonUpdateTime");
     if (lastPythonUpdateMillis != pythonUpdateMillis)
     {
         if (twiddle == 'X')

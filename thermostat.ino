@@ -32,13 +32,6 @@ Sensor sensor;
 Display display;
 Web web;
 
-// Thermostat variables, with defaults set.
-float setPoint = HEAT_TEMP_DETACHED;
-int setOverride = 0;
-
-// The amount of time since the last temperature update.
-unsigned long lastUpdateTime = 0;
-
 void setup() 
 {
     // set the initial message to use during setup.
@@ -46,19 +39,20 @@ void setup()
                            "Bridge          ");
 
     // Set up to toggle the builtin LED.
-    pinMode(13, OUTPUT);
+    pinMode(HEAT_PIN, OUTPUT);
+    pinMode(COOL_PIN, OUTPUT);
   
     // Bridge startup, make the L13 LED go on, then initialize, then off.
     Bridge.begin();
+
+    Bridge.put("heatSetPoint", String(HEAT_TEMP_DETACHED));
+    Bridge.put("coolSetPoint", String(COOL_TEMP_DETACHED));
 
     web.Setup();
     
     // Clear the initial message now that we are set up.    
     display.OnetimeDisplay("                ",
                            "                ");
-  
-    // restart this timer, now that the arduino is up.
-    lastUpdateTime = millis();
 }
 
 void loop() 
@@ -66,11 +60,7 @@ void loop()
     // Update readings from the temperature sensor.
     sensor.Update();
     
-    display.StatusDisplay(sensor.GetTemperature(),
-                          sensor.GetHumidity(),
-                          setPoint,
-                          80.0,
-                          setOverride);
+    display.StatusDisplay();
 
     int button = display.GetButton();
     switch (button)
@@ -78,20 +68,21 @@ void loop()
         case LCD_BUTTON_NO_BUTTON:
             break;
         case LCD_BUTTON_UP       :
-            setPoint = setPoint + 1;
-            setOverride = 1;
+            Bridge.put("heatSetPoint", String(BridgeGetFloat("heatSetPoint") + 1.0));
+            Bridge.put("lcdOverride", "true");
             break;
         case LCD_BUTTON_DOWN     :
-            setPoint = setPoint - 1;
-            setOverride = 1;      
+            Bridge.put("heatSetPoint", String(BridgeGetFloat("heatSetPoint") - 1.0));
+            Bridge.put("lcdOverride", "true");
             break;
         case LCD_BUTTON_LEFT     :
             break;
         case LCD_BUTTON_RIGHT    :
             break;
         case LCD_BUTTON_SELECT   :
-            // need to get setPoint from Linux here
-            setOverride = 0;        
+            Bridge.put("heatSetPoint", String(web.GetPrevHeatSetPoint()));
+            Bridge.put("coolSetPoint", String(web.GetPrevCoolSetPoint()));
+            Bridge.put("lcdOverride", "false");
             break;
         default:
             break;
@@ -100,18 +91,42 @@ void loop()
     web.Update();
     
     // if the temperature is more than the hysteresis above the set point.
-    if (sensor.GetTemperature() - setPoint > HEAT_SHUTOFF_HYSTERESIS)
+    if (sensor.GetTemperature() - BridgeGetFloat("heatSetPoint") > HEAT_SHUTOFF_HYSTERESIS)
     {
         // turn it off
-        digitalWrite(13, LOW);
+        digitalWrite(HEAT_PIN, LOW);
+        Bridge.put("heat", "0");
     }
     // else if the temperature is less than the hysteresis below the set point,
-    else if (setPoint - sensor.GetTemperature() > HEAT_TURNON_HYSTERESIS)
+    else if (BridgeGetFloat("heatSetPoint") - sensor.GetTemperature() > HEAT_TURNON_HYSTERESIS)
     {
         // turn it on
-        digitalWrite(13, HIGH);
+        digitalWrite(HEAT_PIN, HIGH);
+        Bridge.put("heat", "1");
     }
     
+    // if the temperature is more than the hysteresis above the set point.
+    if (sensor.GetTemperature() - BridgeGetFloat("coolSetPoint") > COOL_TURNON_HYSTERESIS)
+    {
+        // turn it on
+        digitalWrite(COOL_PIN, HIGH);
+        Bridge.put("cool", "1");
+    }
+    // else if the temperature is less than the hysteresis below the set point,
+    else if (BridgeGetFloat("coolSetPoint") - sensor.GetTemperature() > COOL_SHUTOFF_HYSTERESIS)
+    {
+        // turn it off
+        digitalWrite(COOL_PIN, HIGH);
+        Bridge.put("cool", "0");
+    }
+    
+    UpdateBridge();
+    
     delay(50);
+}
+
+void UpdateBridge()
+{
+    Bridge.put("uptime_ms",String(millis()));
 }
 

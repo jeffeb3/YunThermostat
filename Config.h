@@ -42,6 +42,23 @@
 // turn on.
 #define HEAT_TURNON_HYSTERESIS 0.5
 
+// This temperature will be the cooler set point until a more clever application
+// connects
+#define COOL_TEMP_DETACHED 80.0
 
+// When the temperature is this amount more than the set point, the ac will
+// turn off.
+#define COOL_SHUTOFF_HYSTERESIS 0.75
+
+// When the temperature is this amount less than the set point, the ac will
+// turn on.
+#define COOL_TURNON_HYSTERESIS 0.5
+
+//-----------------------------------------------------------
+// Relay Settings
+//-----------------------------------------------------------
+
+#define HEAT_PIN 13
+#define COOL_PIN A4
 
 #endif // include guard

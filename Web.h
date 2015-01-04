@@ -29,6 +29,16 @@ public:
     
     void Update();
     
+    float GetPrevHeatSetPoint() const
+    {
+        return prevHeatSetPoint;
+    }
+
+    float GetPrevCoolSetPoint() const
+    {
+        return prevCoolSetPoint;
+    }
+    
 private:
     // Listen on default port 5555, the webserver on the Yun
     // will forward there all the HTTP requests for us.
@@ -37,12 +47,18 @@ private:
     // time since the last read
     unsigned long lastReadTimeMillis;
     
+    float prevHeatSetPoint;
+    float prevCoolSetPoint;
+    
     void Process(YunClient& client);
     void Read(YunClient& client);
     void Command(YunClient& client);
+    void Heartbeat(YunClient& client);
 };
 
-Web::Web()
+Web::Web() :
+    prevHeatSetPoint(HEAT_TEMP_DETACHED),
+    prevCoolSetPoint(COOL_TEMP_DETACHED)
 {
 }
 
@@ -73,7 +89,6 @@ void Web::Update()
     }
 }
 
-
 void Web::Process(YunClient& client) 
 {
     // read the command
@@ -81,14 +96,13 @@ void Web::Process(YunClient& client)
     
     command.trim(); // remove trailing whitespace
     
-    // is "sensors" command?
-    if (command == "sensors") 
-    {
-        Read(client);
-    }
-    else if (command == "heat") 
+    if (command == "command") 
     {
         Command(client);
+    }
+    else if (command == "heartbeat") 
+    {
+        Heartbeat(client);
     }
     else
     {
@@ -98,52 +112,37 @@ void Web::Process(YunClient& client)
     }
 }
 
-void Web::Read(YunClient& client) 
-{
-    unsigned long uptime_ms = millis();
-    Bridge.put("uptime_ms", String(uptime_ms));
-
-    // Send feedback to client
-    client.print(F("{\n"));
-    client.print(F("  \"uptime_ms\" : "));
-    client.print(uptime_ms);
-    client.print(F(",\n"));
-    client.print(F("  \"temperature\" : "));
-    client.print(BridgeGetFloat("temperature"));
-    client.print(F(",\n"));
-    client.print(F("  \"humidity\": "));
-    client.print(BridgeGetFloat("humidity"));
-    client.print(F(",\n"));
-    client.print(F("  \"setPoint\" : "));
-    client.print(BridgeGetFloat("setPoint"));
-    client.print(F(",\n"));
-    client.print(F("  \"lcdOverride\" : "));
-    client.print(BridgeGetBool("lcdOverride"));
-    client.print(F(",\n"));
-    client.print(F("  \"lastUpdateTime\" : "));
-    client.print(millis() - lastReadTimeMillis);
-    client.print(F(",\n"));
-    client.print(F("  \"heat\" : "));
-    client.print(digitalRead(13));
-    client.print(F(",\n"));
-    client.print(F("  \"cool\" : "));
-    client.print(false);
-    client.println(F("\n}"));
-  
-    // restart this timer
-    lastReadTimeMillis = millis();
-}
-
 void Web::Command(YunClient& client) 
 {
     // Read desired state
-    int setPoint = client.parseFloat();
+    float heatSetPoint = client.parseFloat();
+    float coolSetPoint = client.parseFloat();
+  
+    if ((heatSetPoint != prevHeatSetPoint) ||
+        (coolSetPoint != prevCoolSetPoint))
+    {
+        prevHeatSetPoint = heatSetPoint;
+        Bridge.put("heatSetPoint",String(heatSetPoint));
+        prevCoolSetPoint = coolSetPoint;
+        Bridge.put("coolSetPoint",String(coolSetPoint));
+        Bridge.put("lcdOverride", "false");
+    }
   
     // Send feedback to client
-    client.print(F("The setPoint is ... "));
-    client.println(setPoint);
-    Bridge.put("setPoint",String(setPoint));
-    Bridge.put("pytonUpdateTime", String(millis()));
+    client.print(F("The setPoint range is "));
+    client.print(BridgeGetFloat("heatSetPoint"));
+    client.print(F(" ... "));
+    client.println(BridgeGetFloat("coolSetPoint"));
+}
+
+void Web::Heartbeat(YunClient& client)
+{
+    // put the amount of time since the last time this was called in a variable called lastUpdateTime
+    Bridge.put("lastUpdateTime", String(millis() - BridgeGetULong("pythonUpdateTime")));
+    Bridge.put("pythonUpdateTime", String(millis()));
+    client.print(F("{\"uptime_ms\": "));
+    client.print(BridgeGetULong("uptime_ms"));
+    client.println(F("}"));
 }
 
 #endif // INCLUDE GUARD

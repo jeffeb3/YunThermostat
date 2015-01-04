@@ -181,8 +181,8 @@ $(document).ready(function()
             {
                 $("#coolStatus").show(1000);
             }
-            $(".heatSetPoint").text(data.setPoint.toPrecision(3));
-            $(".coolSetPoint").text(data.setPoint.toPrecision(3)); // TODO, make a different set point for cooling.
+            $(".heatSetPoint").text(data.heatSetPoint.toPrecision(3));
+            $(".coolSetPoint").text(data.coolSetPoint.toPrecision(3)); // TODO, make a different set point for cooling.
         }
     }
     

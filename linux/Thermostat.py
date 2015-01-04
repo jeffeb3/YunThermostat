@@ -152,12 +152,28 @@ class QueryThread(threading.Thread):
         while not self.quit:
             self.lastMeasurementTime = time.time()
 
+            # ping the server
+            heartbeat = json.load(urllib2.urlopen("http://10.0.2.208/arduino/heartbeat"));
+
             # Get data from server.
-            data = json.load(urllib2.urlopen("http://10.0.2.208/arduino/sensors"));
+            data = json.load(urllib2.urlopen("http://10.0.2.208/data/get/"));
+            data = data["value"]
             data["time"] = time.time() * 1000.0
             data["py_uptime_ms"] = uptime() * 1000.0
             data["flappy_ping"] = False #isPinging("10.0.2.219")
             data["phone_ping"] = False #isPinging("10.0.2.222")
+            
+            # convert some things to float
+            data["temperature"] = float(data["temperature"])
+            data["humidity"] = float(data["humidity"])
+            data["uptime_ms"] = float(data["uptime_ms"])
+            data["heatSetPoint"] = float(data["heatSetPoint"])
+            data["coolSetPoint"] = float(data["coolSetPoint"])
+            data["lastUpdateTime"] = float(data["lastUpdateTime"])
+            data["heat"] = int(data["heat"])
+            data["cool"] = int(data["cool"])
+            
+            data["uptime_ms"] = heartbeat["uptime_ms"]
             
             #dataAcq.append(data)
 
@@ -171,10 +187,10 @@ class QueryThread(threading.Thread):
                 currentMeasurement = data
 
             # Calculate what the set point should be
-            setPoint = getSetTemperatureRange()[0]
+            setRange = getSetTemperatureRange()
             
             # send the set point to the arduino
-            urllib2.urlopen("http://10.0.2.208/arduino/heat/" + str(setPoint))
+            urllib2.urlopen("http://10.0.2.208/arduino/command/" + str(setRange[0]) + "/" + str(setRange[1]))
 
             # sleep a moment at a time, so that we can catch the quit signal
             while (time.time() - self.lastMeasurementTime) < 30.0 and not self.quit:

@@ -30,7 +30,7 @@ public:
     inline Sensor() :
         dht(DHT_DATA_PIN, DHT_TYPE),
         temperatureLPF(0.5),
-        humidityLPF(0.5),
+        humidityLPF(0.2),
         temperature(72.0),
         humidity(20.0),
         lastUpdateMillis(millis())
