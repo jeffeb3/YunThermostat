@@ -146,11 +146,25 @@ class QueryThread(threading.Thread):
         threading.Thread.__init__(self)
         self.quit = False # set to True when you want to stop the while loop.
         self.lastMeasurementTime = 0
+        self.lastOutsideMeasurementTime = 0
+        self.outsideTemp = 0
     
     def run(self):
         '''Try to read from the arduino forever'''
         while not self.quit:
             self.lastMeasurementTime = time.time()
+
+            # Gather data from Wunderground, but only every 10 minutes (limited for free api account)
+            outsideTempUpdated = False
+            if ((time.time() - self.lastOutsideMeasurementTime) > 1800):
+                try:
+                    self.lastOutsideMeasurementTime = time.time()
+                    outsideData = json.load(urllib2.urlopen("http://api.wunderground.com/api/2cbb3dea02abb06e/conditions/q/CO/Golden.json"))
+                    self.outsideTemp = outsideData['current_observation']['temp_f']
+                    outsideTempUpdated = True
+                except:
+                    # swallow any exceptions, we don't want the thermostat to break if there is no Internet
+                    pass
 
             # ping the server
             heartbeat = json.load(urllib2.urlopen("http://10.0.2.208/arduino/heartbeat"));
@@ -162,6 +176,8 @@ class QueryThread(threading.Thread):
             data["py_uptime_ms"] = uptime() * 1000.0
             data["flappy_ping"] = False #isPinging("10.0.2.219")
             data["phone_ping"] = False #isPinging("10.0.2.222")
+            data["outside_temp"] = self.outsideTemp
+            data["outside_temp_updated"] = outsideTempUpdated
             
             # convert some things to float
             data["temperature"] = float(data["temperature"])
@@ -356,6 +372,7 @@ def getUpdaterInfo():
         "linuxUptimeHistory" : '',
         "flappyPingHistory" : '',
         "phonePingHistory" : '',
+        "outsideTempHistory" : '',
     }
     
     with plotDataLock:
@@ -369,6 +386,8 @@ def getUpdaterInfo():
             updaterInfo['linuxUptimeHistory']   += '[ %f, %f],' % (data["time"] - (time.timezone * 1000.0), data["py_uptime_ms"])
             updaterInfo['flappyPingHistory']    += '[ %f, %f],' % (data["time"] - (time.timezone * 1000.0), data["flappy_ping"])
             updaterInfo['phonePingHistory']     += '[ %f, %f],' % (data["time"] - (time.timezone * 1000.0), data["phone_ping"])
+            if data["outside_temp_updated"]:
+                updaterInfo['outsideTempHistory']   += '[ %f, %f],' % (data["time"] - (time.timezone * 1000.0), data["outside_temp"])
 
     # Add the outside brackets to each plot data.
     for key, value in updaterInfo.items():

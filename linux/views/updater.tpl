@@ -31,6 +31,10 @@ $(document).ready(function()
             data: {{heatHistory}},
             points: { show : false },
             yaxis: 3
+        },
+        {
+            label: "OutsideTemp(&degF)",
+            data: {{outsideTempHistory}}
         }
     ];
     
@@ -73,7 +77,6 @@ $(document).ready(function()
                     ],
             yaxes: [
             {
-                autoscaleMargin : 1.1,
                 tickFormatter : temperatureDeg,
             },
             {
@@ -92,7 +95,7 @@ $(document).ready(function()
             },
             legend:
             {
-                noColumns : 4,
+                noColumns : 5,
                 container : $("#tempLegend")
             }
         });
@@ -147,6 +150,10 @@ $(document).ready(function()
             temperaturePlotData[0].data.push([data.time - {{timezone}},data.temperature]);
             temperaturePlotData[1].data.push([data.time - {{timezone}},data.humidity]);
             temperaturePlotData[2].data.push([data.time - {{timezone}},data.heat]);
+            if (data.outside_temp_updated)
+            {
+                temperaturePlotData[3].data.push([data.time - {{timezone}},data.outside_temp]);
+            }
             healthPlotData[0].data.push([data.time - {{timezone}},data.lastUpdateTime]);
             healthPlotData[1].data.push([data.time - {{timezone}},data.flappy_ping]);
             healthPlotData[2].data.push([data.time - {{timezone}},data.phone_ping]);
