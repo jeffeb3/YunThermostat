@@ -7,11 +7,13 @@
 # X style sheet (or just use mobile)
 # X Add humidity, and heat on to front page.
 # X Add time to front page
-# X Create file history of status/temps (csv?, shelf?)
 
 # X hourly program format
 # X hourly program interface (jquery)
 
+# - Weather test button
+# - Create file history of status/temps (csv?, shelf?)
+# - Organize the Thermostat.py code.
 # - Add ways to navigate the graph
 # - watchdogs on the atmega and the arm with reboots
 # - email alerts for resets/errors
@@ -43,7 +45,6 @@ from bottle import route, static_file, template, response, request
 
 # Import our email utility function
 from email_utils import sendemail
-#from daq import daq
 
 web = Bottle()
 
@@ -89,12 +90,17 @@ except:
         settings[day + "Night"] = 1320
         settings[day + "Morn"] = 360
     
+    settings["apiKey"] = ''
+    settings["weather_state"] = 'CO'
+    settings["weather_city"] = 'Denver'
+    
+    # secret settings (not on the web page).
+    settings["arduino_addr"] = "localhost"
+    
     with open('settings.json', 'w') as fp:
         json.dump(settings, fp, sort_keys=True, indent=4)
     
 settingsLock = threading.RLock()
-
-#dataAcq = daq(settings['email_from'], settings['email_passw'])
 
 def uptime():
     ''' get this system's seconds since starting '''    
@@ -110,35 +116,6 @@ def isPinging(host, max_tries = 10):
             return True
     return False
 
-def getSetTemperatureRange():
-    now = datetime.datetime.now()
-    day = days[(now.weekday() + 1) % 7] # python says 0 is Monday.
-    wakeUp = None
-    sleep = None
-    with settingsLock:
-        wakeUp = settings[day + 'Morn']
-        sleep = settings[day + 'Night']
-    
-    asleep = False
-    minutes = now.minute + 60*now.hour
-    if minutes < wakeUp:
-        # we are still asleep
-        asleep = True
-    elif minutes < sleep:
-        # we are just waking up
-        asleep = False
-    else:
-        # we went back to sleep
-        asleep = True
-    
-    with settingsLock:
-        if asleep:
-            return (settings["heatTempSleeping"], settings["coolTempSleeping"])
-        else:
-            return (settings["heatTempComfortable"], settings["coolTempComfortable"])
-
-        
-
 class QueryThread(threading.Thread):
     ''' This thread runs continuously regarless of the interaction with the user.'''
 
@@ -148,6 +125,8 @@ class QueryThread(threading.Thread):
         self.lastMeasurementTime = 0
         self.lastOutsideMeasurementTime = 0
         self.outsideTemp = 0
+        self.sleeping = False
+        self.away = False
     
     def run(self):
         '''Try to read from the arduino forever'''
@@ -159,18 +138,27 @@ class QueryThread(threading.Thread):
             if ((time.time() - self.lastOutsideMeasurementTime) > 1800):
                 try:
                     self.lastOutsideMeasurementTime = time.time()
-                    outsideData = json.load(urllib2.urlopen("http://api.wunderground.com/api/2cbb3dea02abb06e/conditions/q/CO/Golden.json"))
+                    apiKey = ""
+                    weather_loc = ""
+                    with settingsLock:
+                        apiKey = settings["apiKey"]
+                        weather_loc = settings["weather_state"] + '/' + settings["weather_city"]
+                    outsideData = json.load(urllib2.urlopen("http://api.wunderground.com/api/" + apiKey + "/conditions/q/" + weather_loc + ".json"))
                     self.outsideTemp = outsideData['current_observation']['temp_f']
                     outsideTempUpdated = True
                 except:
                     # swallow any exceptions, we don't want the thermostat to break if there is no Internet
                     pass
 
+            arduino_addr = ''
+            with settingsLock:
+                arduino_addr = settings["arduino_addr"]
+            
             # ping the server
-            heartbeat = json.load(urllib2.urlopen("http://10.0.2.208/arduino/heartbeat"));
+            heartbeat = json.load(urllib2.urlopen("http://" + arduino_addr + "/arduino/heartbeat"));
 
             # Get data from server.
-            data = json.load(urllib2.urlopen("http://10.0.2.208/data/get/"));
+            data = json.load(urllib2.urlopen("http://" + arduino_addr + "/data/get/"));
             data = data["value"]
             data["time"] = time.time() * 1000.0
             data["py_uptime_ms"] = uptime() * 1000.0
@@ -178,6 +166,8 @@ class QueryThread(threading.Thread):
             data["phone_ping"] = False #isPinging("10.0.2.222")
             data["outside_temp"] = self.outsideTemp
             data["outside_temp_updated"] = outsideTempUpdated
+            data["sleeping"] = self.sleeping
+            data["away"] = self.away
             
             # convert some things to float
             data["temperature"] = float(data["temperature"])
@@ -203,15 +193,41 @@ class QueryThread(threading.Thread):
                 currentMeasurement = data
 
             # Calculate what the set point should be
-            setRange = getSetTemperatureRange()
+            setRange = self.getSetTemperatureRange()
             
             # send the set point to the arduino
-            urllib2.urlopen("http://10.0.2.208/arduino/command/" + str(setRange[0]) + "/" + str(setRange[1]))
+            urllib2.urlopen("http://" + arduino_addr + "/arduino/command/" + str(setRange[0]) + "/" + str(setRange[1]))
 
             # sleep a moment at a time, so that we can catch the quit signal
             while (time.time() - self.lastMeasurementTime) < 30.0 and not self.quit:
                 time.sleep(0.5)
     
+    def getSetTemperatureRange(self):
+        now = datetime.datetime.now()
+        day = days[(now.weekday() + 1) % 7] # python says 0 is Monday.
+        wakeUp = None
+        sleep = None
+        with settingsLock:
+            wakeUp = settings[day + 'Morn']
+            sleep = settings[day + 'Night']
+        
+        minutes = now.minute + 60*now.hour
+        if minutes < wakeUp:
+            # we are still asleep
+            self.sleeping = True
+        elif minutes < sleep:
+            # we are just waking up
+            self.sleeping = False
+        else:
+            # we went back to sleep
+            self.sleeping = True
+        
+        with settingsLock:
+            if self.sleeping:
+                return (settings["heatTempSleeping"], settings["coolTempSleeping"])
+            else:
+                return (settings["heatTempComfortable"], settings["coolTempComfortable"])
+
     def stop(self):
         self.quit = True
 
@@ -240,6 +256,19 @@ def yunserver_sse():
 
         # Sleep so the CPU isn't consumed by this thread. This will determine the update rate of the SSE.
         time.sleep(0.5)
+
+@web.route('/data.json')
+def daq():
+    '''  Respond with a single json object, the most recent data. '''
+
+    # Get data from thead.
+    data = None
+    with currentMeasurementLock:
+        # deep copy
+        data = copy.copy(currentMeasurement)
+
+    # Send the data to the web page in the server sent event format.
+    return json.dumps(data, indent=4)
 
 @web.route('/settings')
 def settings_get():
@@ -321,10 +350,10 @@ def root():
 def action():
     ''' This method gets called from the ajax calls in javascript to do things from the forms. '''
     id = request.forms.get('id')
-
-    if id == "doHeat":
-        with settingsLock:
-            settings["doHeat"] = bool(request.forms.get('value'))
+    print id
+    
+    if 'Enable' in id:
+        print request.forms.get('value')
     
 @web.route('/settings', method='POST')
 def settings_post():
@@ -355,6 +384,9 @@ def settings_post():
             settings[day + "Morn"] = int(request.forms.get(day + "Morn"))
             settings[day + "Night"] = int(request.forms.get(day + "Night"))
             
+        settings["apiKey"] = request.forms.get('apiKey')
+        settings["weather_state"] = request.forms.get('weather_state')
+        settings["weather_city"] = request.forms.get('weather_city')
         
         with open('settings.json', 'w') as fp:
             json.dump(settings, fp, sort_keys=True, indent=4)
