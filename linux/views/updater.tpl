@@ -168,6 +168,7 @@ $(document).ready(function()
             
             // Update the UI.
             $('#temperature').text(data.temperature.toPrecision(3));
+            $('#outsideTemperature').text(data.outside_temp.toPrecision(3));
             $('#humidity').text(data.humidity.toPrecision(3));
             $('#uptime_number').text('Arduino: ' + msToText(data.uptime_ms) + ' Linux: ' + msToText(data.py_uptime_ms));
             var now = new Date(data.time);

@@ -58,7 +58,7 @@
                 </div>
 
                 <div data-role="collapsible" data-collapsed="false">
-                    <h1>T: <span id="temperature">?</span> &degF H: <span id="humidity">?</span>%</h1>
+                    <h1>In: <span id="temperature">?</span> &degF Out: <span id="outsideTemperature">?</span>&degF</h1>
                     <div id="tempPlaceholder" class="plot-placeholder ui-body-inherit"></div>
                     <div id="tempLegend"      class="legend-placeholder ui-body-inherit"></div>
                 </div>
@@ -166,6 +166,17 @@
                         <input type="checkbox" name="email_oor" class="email-settings" id="email_oor" value=1></input>
                     </div>
                 </div>
+
+                <div data-role="collapsible" data-collapsed="true">
+                    <h1>Weather</h1>
+                    <label for="weather_state">State</label>
+                    <input type="text" name="weather_state" id="weather_state" placeholder="CO" data-clear-btn="true"></input>
+                    <label for="weather_city">City</label>
+                    <input type="text" name="weather_city" id="weather_city" placeholder="Denver" data-clear-btn="true"></input>
+                    <label for="apiKey">API key for <a href="http://www.wunderground.com/weather/api/d/pricing.html" class="ui-btn ui-btn-inline">Wunderground.com </a></label>
+                    <input type="text" name="apiKey" id="apiKey" data-clear-btn="true"></input>
+                    
+                </div>        
 
                 <div data-role="collapsible" data-collapsed="true">
                     <h1>Advanced</h1>
