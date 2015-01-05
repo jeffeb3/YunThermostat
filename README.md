@@ -1,6 +1,8 @@
 YunThermostat
 =============
 
+[![Gitter](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/jeffeb3/YunThermostat?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+
 Developing a thermosatat running on the Arduino Yun
 
 arduino_setup.txt has instructions for setting up the Arduino Yun.
