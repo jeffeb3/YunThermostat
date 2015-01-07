@@ -11,6 +11,7 @@
 # - Make it possible to copy a template spreadsheet from somewhere (possibly
 #   checked into git) and insert data into it, with all the bells and whistles
 # - Add a comment/status line that will show up as events in the graph.
+#   - Add status for reboots.
 
 # import python libraries
 import datetime, time, json, urllib2, sys
@@ -111,7 +112,8 @@ if __name__ == '__main__':
 
     dataAcq = daq(options.username, options.password)
     addr = "http://" + options.ip + ":8080/data.json"
-    
+    print 'connecting to: ' + addr
+    count = 0    
     while True:
         startTime = time.time()
         try:
@@ -125,5 +127,9 @@ if __name__ == '__main__':
             continue
         
         dataAcq.append(data)
-
-        time.sleep(30.0 - (time.time() - startTime))
+        count += 1
+        if count % 100 == 0:
+            print '%d sent' % count 
+        seconds_left = 30.0 - (time.time() - startTime)
+        if seconds_left > 0.0:
+            time.sleep(30.0 - (time.time() - startTime))
