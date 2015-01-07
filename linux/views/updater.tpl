@@ -22,8 +22,8 @@ $(document).ready(function()
             data: {{temperatureHistory}}
         },
         {
-            label: "Humidity(%)",
-            data: {{humidityHistory}},
+            label: "OutsideTemp(&degF)",
+            data: {{outsideTempHistory}},
             yaxis: 2
         },
         {
@@ -31,10 +31,6 @@ $(document).ready(function()
             data: {{heatHistory}},
             points: { show : false },
             yaxis: 3
-        },
-        {
-            label: "OutsideTemp(&degF)",
-            data: {{outsideTempHistory}}
         }
     ];
     
@@ -78,10 +74,11 @@ $(document).ready(function()
             yaxes: [
             {
                 tickFormatter : temperatureDeg,
+                tickDecimals: 1
             },
             {
-                alignTicksWithAxis: 1,
-                tickFormatter : humidityPercent,
+                tickFormatter : temperatureDeg,
+                tickDecimals: 1,
                 position: "right"
             },
             {
@@ -148,12 +145,11 @@ $(document).ready(function()
             lastMeasureTime = data.time
             // Update the plots
             temperaturePlotData[0].data.push([data.time - {{timezone}},data.temperature]);
-            temperaturePlotData[1].data.push([data.time - {{timezone}},data.humidity]);
-            temperaturePlotData[2].data.push([data.time - {{timezone}},data.heat]);
             if (data.outside_temp_updated)
             {
-                temperaturePlotData[3].data.push([data.time - {{timezone}},data.outside_temp]);
+                temperaturePlotData[1].data.push([data.time - {{timezone}},data.outside_temp]);
             }
+            temperaturePlotData[2].data.push([data.time - {{timezone}},data.heat]);
             healthPlotData[0].data.push([data.time - {{timezone}},data.lastUpdateTime]);
             healthPlotData[1].data.push([data.time - {{timezone}},data.flappy_ping]);
             healthPlotData[2].data.push([data.time - {{timezone}},data.phone_ping]);
@@ -191,6 +187,8 @@ $(document).ready(function()
             }
             $(".heatSetPoint").text(data.heatSetPoint.toPrecision(3));
             $(".coolSetPoint").text(data.coolSetPoint.toPrecision(3)); // TODO, make a different set point for cooling.
+            $("#heatOverrideEnable").prop('checked', data.lcdOverride);
+            $("#coolOverrideEnable").prop('checked', data.lcdOverride);
         }
     }
     

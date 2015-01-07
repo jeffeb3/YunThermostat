@@ -408,8 +408,7 @@ def getUpdaterInfo():
     }
     
     with plotDataLock:
-        #plotData = plotdData[-1000:] TODO
-        for data in plotData[-1000:]: # clip to 1000 points, that should be enough for now
+        for data in plotData:
             updaterInfo['temperatureHistory']   += '[ %f, %f],' % (data["time"] - (time.timezone * 1000.0), data["temperature"])
             updaterInfo['humidityHistory']      += '[ %f, %f],' % (data["time"] - (time.timezone * 1000.0), data["humidity"])
             updaterInfo['heatHistory']          += '[ %f, %d],' % (data["time"] - (time.timezone * 1000.0), data["heat"])

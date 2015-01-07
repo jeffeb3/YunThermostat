@@ -32,6 +32,10 @@ $(document).ready(function()
             $("#email_passw").val('null'); // a sentinal value.
             $("#email_restart").prop("checked", settings.email_restart);
             $("#email_oor").prop("checked", settings.email_oor);
+
+            $("#apiKey").val(settings.apiKey);
+            $("#weather_state").val(settings.weather_state);
+            $("#weather_city").val(settings.weather_city);
             
             // update which GUI elements are enabled.
             updateEnabled();
@@ -76,7 +80,34 @@ $(document).ready(function()
             $(".email-settings").hide();
         }
     }
-    
+
+    $("#heatOverrideMinus, #heatOverridePlus, #coolOverrideMinus, #coolOverridePlus").on('click', function()
+    {
+        $.ajax(
+        {
+            url: '/action',
+            type: 'POST',
+            data:
+            {
+                id:$(this).attr('id')
+            }
+        });
+    });
+
+    $("#heatOverrideEnable, #coolOverrideEnable").on('click', function()
+    {
+        $.ajax(
+        {
+            url: '/action',
+            type: 'POST',
+            data:
+            {
+                id:$(this).attr('id'),
+                value:$(this).prop('checked')
+            }
+        });
+    });
+
     // Test the email settings
     $("#email_test").on('mouseup', function()
     {
