@@ -214,6 +214,30 @@ $(document).ready(function()
         $('.disconnected').show();
         $('.connected').hide();
     };
+    
+    // Create server sent event connection for the logger.
+    var log_server = new EventSource('/logs');
+
+    function writeLog(data)
+    {
+        $("#log").append('<p>' + data + '</p>');
+    };
+
+    log_server.onmessage = function(e)
+    {
+        // Update measurement value.
+        writeLog(e.data);
+    };
+
+    log_server.onopen = function(e)
+    {
+        writeLog('Connected.');
+    };
+
+    log_server.onerror = function(e)
+    {
+        writeLog('Disconnected.');
+    };
 });
 
 function msToText(milliseconds)

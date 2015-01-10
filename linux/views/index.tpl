@@ -70,6 +70,11 @@
                     <div id="healthLegend"      class="legend-placeholder ui-body-inherit"></div>
                 </div>
 
+                <div data-role="collapsible" data-collapsed="true">
+                    <h1>Log</h1>
+                    <div id="log"></div>
+                </div>
+
             </div>
             
             <div data-role="footer"><h1></h1></div>

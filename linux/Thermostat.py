@@ -33,13 +33,38 @@ import datetime
 import json
 import urllib2
 import os
+import sys
 import copy
 import commands
 import shelve
 import socket
+import logging
+import sseLogHandler
 from smtplib import SMTPAuthenticationError, SMTPResponseException, SMTPRecipientsRefused
 
-# Import flask library.
+# set up the logger
+log = logging.getLogger('Thermostat')
+# common formatter
+formatter = logging.Formatter("%(asctime)s - %(filename)s:%(lineno)d:%(message)s", 
+                              '%a, %d %b %Y %H:%M:%S')
+# also log to a set of files.
+fileHandler = logging.handlers.RotatingFileHandler('/var/log/thermostat.log', maxBytes=10000, backupCount=5, delay=True)
+fileHandler.setFormatter(formatter)
+log.addHandler(fileHandler)
+print '\n\nLogging to /var/log/thermostat.log\n\n'
+## and to the console
+stdoutHandler = logging.StreamHandler(sys.stdout)
+log.addHandler(stdoutHandler)
+log.setLevel(logging.DEBUG)
+
+# set up a way to record unhandled exceptions.
+def log_uncaught_exceptions(*exc_info): 
+    log.critical('Unhandled exception:', exc_info=exc_info)
+
+# make the system log the final exception
+sys.excepthook = log_uncaught_exceptions
+
+# Import bottle library.
 from bottle import run, Bottle, PasteServer
 from bottle import route, static_file, template, response, request
 
@@ -47,6 +72,9 @@ from bottle import route, static_file, template, response, request
 from email_utils import sendemail
 
 web = Bottle()
+sseHandler = sseLogHandler.SseLogHandler(web)
+sseHandler.setFormatter(formatter)
+log.addHandler(sseHandler)
 
 days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
 
@@ -60,10 +88,11 @@ settings = {}
 try:
     with open('settings.json', 'r') as fp:
         settings = json.load(fp)
-        print 'Loaded settings:'
-        print json.dumps(settings, sort_keys=True, indent=4)
+        log.info('Loaded settings:')
+        # this logs my password to the webpage... Dont do that.
+        # log.info(json.dumps(settings, sort_keys=True, indent=4))
 except:
-    print 'Failure to load settings. Setting to defaults'
+    log.error('Failure to load settings. Setting to defaults')
     
     # These are the initial settings for the configuration page.
     settings = {}
@@ -121,6 +150,7 @@ class QueryThread(threading.Thread):
 
     def __init__(self):
         threading.Thread.__init__(self)
+        self.daemon = True
         self.quit = False # set to True when you want to stop the while loop.
         self.lastMeasurementTime = 0
         self.lastOutsideMeasurementTime = 0
@@ -131,76 +161,87 @@ class QueryThread(threading.Thread):
     def run(self):
         '''Try to read from the arduino forever'''
         while not self.quit:
-            self.lastMeasurementTime = time.time()
+            # this try...except block is to log all exceptions. It's in this while loop because I want to keep going.
+            try:
+                self.lastMeasurementTime = time.time()
+    
+                # Gather data from Wunderground, but only every 10 minutes (limited for free api account)
+                outsideTempUpdated = False
+                if ((time.time() - self.lastOutsideMeasurementTime) > 360):
+                    try:
+                        apiKey = ""
+                        weather_loc = ""
+                        with settingsLock:
+                            apiKey = settings["apiKey"]
+                            weather_loc = settings["weather_state"] + '/' + settings["weather_city"]
+                        outsideData = json.load(urllib2.urlopen("http://api.wunderground.com/api/" + apiKey + "/conditions/q/" + weather_loc + ".json"))
+                        self.outsideTemp = outsideData['current_observation']['temp_f']
+                        log.info('Retrieved outside temp:' + str(self.outsideTemp))
+                        outsideTempUpdated = True
+                        self.lastOutsideMeasurementTime = time.time()
+                    except Exception as e:
+                        # swallow any exceptions, we don't want the thermostat to break if there is no Internet
+                        log.exception(e)
+                        pass
+    
+                arduino_addr = ''
+                with settingsLock:
+                    arduino_addr = settings["arduino_addr"]
+                
+                # ping the server
+                heartbeat = json.load(urllib2.urlopen("http://" + arduino_addr + "/arduino/heartbeat"));
+    
+                # Get data from server.
+                data = json.load(urllib2.urlopen("http://" + arduino_addr + "/data/get/"));
+                data = data["value"]
+                data["time"] = time.time() * 1000.0
+                data["py_uptime_ms"] = uptime() * 1000.0
+                data["flappy_ping"] = False #isPinging("10.0.2.219")
+                data["phone_ping"] = False #isPinging("10.0.2.222")
+                data["outside_temp"] = self.outsideTemp
+                data["outside_temp_updated"] = outsideTempUpdated
+                data["sleeping"] = self.sleeping
+                data["away"] = self.away
+                
+                # convert some things to float
+                data["temperature"] = float(data["temperature"])
+                data["humidity"] = float(data["humidity"])
+                data["uptime_ms"] = float(data["uptime_ms"])
+                data["heatSetPoint"] = float(data["heatSetPoint"])
+                data["coolSetPoint"] = float(data["coolSetPoint"])
+                data["lastUpdateTime"] = float(data["lastUpdateTime"])
+                data["heat"] = int(data["heat"])
+                data["cool"] = int(data["cool"])
+                
+                data["uptime_ms"] = heartbeat["uptime_ms"]
+                
+                log.info('Arduino (%.1fs) -- T: %.1f H: %.1f', data["lastUpdateTime"] / 1000.0, data["temperature"], data["humidity"])
+    
+                with plotDataLock:
+                    global plotData
+                    plotData.append(data)
+                    plotData = plotData[-2880:] # clip to 24 hours
+    
+                with currentMeasurementLock:
+                    global currentMeasurement
+                    currentMeasurement = data
+    
+                # Calculate what the set point should be
+                setRange = self.getSetTemperatureRange()
+                
+                # send the set point to the arduino
+                urllib2.urlopen("http://" + arduino_addr + "/arduino/command/" + str(setRange[0]) + "/" + str(setRange[1]))
+    
+                # sleep a moment at a time, so that we can catch the quit signal
+                while (time.time() - self.lastMeasurementTime) < 30.0 and not self.quit:
+                    time.sleep(0.5)
+            except (KeyboardInterrupt, SystemExit):
+                raise
+            except:
+                log_uncaught_exceptions(*sys.exc_info())
+                time.sleep(60.0) # sleep for extra long.
+                continue
 
-            # Gather data from Wunderground, but only every 10 minutes (limited for free api account)
-            outsideTempUpdated = False
-            if ((time.time() - self.lastOutsideMeasurementTime) > 1800):
-                try:
-                    self.lastOutsideMeasurementTime = time.time()
-                    apiKey = ""
-                    weather_loc = ""
-                    with settingsLock:
-                        apiKey = settings["apiKey"]
-                        weather_loc = settings["weather_state"] + '/' + settings["weather_city"]
-                    outsideData = json.load(urllib2.urlopen("http://api.wunderground.com/api/" + apiKey + "/conditions/q/" + weather_loc + ".json"))
-                    self.outsideTemp = outsideData['current_observation']['temp_f']
-                    outsideTempUpdated = True
-                except:
-                    # swallow any exceptions, we don't want the thermostat to break if there is no Internet
-                    pass
-
-            arduino_addr = ''
-            with settingsLock:
-                arduino_addr = settings["arduino_addr"]
-            
-            # ping the server
-            heartbeat = json.load(urllib2.urlopen("http://" + arduino_addr + "/arduino/heartbeat"));
-
-            # Get data from server.
-            data = json.load(urllib2.urlopen("http://" + arduino_addr + "/data/get/"));
-            data = data["value"]
-            data["time"] = time.time() * 1000.0
-            data["py_uptime_ms"] = uptime() * 1000.0
-            data["flappy_ping"] = False #isPinging("10.0.2.219")
-            data["phone_ping"] = False #isPinging("10.0.2.222")
-            data["outside_temp"] = self.outsideTemp
-            data["outside_temp_updated"] = outsideTempUpdated
-            data["sleeping"] = self.sleeping
-            data["away"] = self.away
-            
-            # convert some things to float
-            data["temperature"] = float(data["temperature"])
-            data["humidity"] = float(data["humidity"])
-            data["uptime_ms"] = float(data["uptime_ms"])
-            data["heatSetPoint"] = float(data["heatSetPoint"])
-            data["coolSetPoint"] = float(data["coolSetPoint"])
-            data["lastUpdateTime"] = float(data["lastUpdateTime"])
-            data["heat"] = int(data["heat"])
-            data["cool"] = int(data["cool"])
-            
-            data["uptime_ms"] = heartbeat["uptime_ms"]
-            
-            #dataAcq.append(data)
-
-            with plotDataLock:
-                global plotData
-                plotData.append(data)
-                plotData = plotData[-2880:] # clip to 24 hours
-
-            with currentMeasurementLock:
-                global currentMeasurement
-                currentMeasurement = data
-
-            # Calculate what the set point should be
-            setRange = self.getSetTemperatureRange()
-            
-            # send the set point to the arduino
-            urllib2.urlopen("http://" + arduino_addr + "/arduino/command/" + str(setRange[0]) + "/" + str(setRange[1]))
-
-            # sleep a moment at a time, so that we can catch the quit signal
-            while (time.time() - self.lastMeasurementTime) < 30.0 and not self.quit:
-                time.sleep(0.5)
     
     def getSetTemperatureRange(self):
         now = datetime.datetime.now()
@@ -343,6 +384,8 @@ def root():
         indexInformation["times"] = times
 
         indexInformation["settings"] = copy.copy(settings)
+
+    log.info("Web page request for '/' from %s", request.remote_addr)
     
     return template('index', **indexInformation)
 
@@ -449,6 +492,7 @@ def staticPage(path):
     return static_file(path, root='static')
 
 if __name__ == '__main__':
+
     # create an instance of the query.
     query = QueryThread()
     
