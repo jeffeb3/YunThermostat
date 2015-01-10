@@ -39,13 +39,14 @@ import commands
 import shelve
 import socket
 import logging
+import logging.handlers
 import sseLogHandler
 from smtplib import SMTPAuthenticationError, SMTPResponseException, SMTPRecipientsRefused
 
 # set up the logger
 log = logging.getLogger('Thermostat')
 # common formatter
-formatter = logging.Formatter("%(asctime)s - %(filename)s:%(lineno)d:%(message)s", 
+formatter = logging.Formatter("%(asctime)s - %(message)s", 
                               '%a, %d %b %Y %H:%M:%S')
 # also log to a set of files.
 fileHandler = logging.handlers.RotatingFileHandler('/var/log/thermostat.log', maxBytes=10000, backupCount=5, delay=True)
@@ -492,6 +493,8 @@ def staticPage(path):
     return static_file(path, root='static')
 
 if __name__ == '__main__':
+    
+    log.info('Started at %s', str(datetime.datetime.now()))
 
     # create an instance of the query.
     query = QueryThread()
