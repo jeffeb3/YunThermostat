@@ -178,9 +178,17 @@
                     <input type="text" name="weather_state" id="weather_state" placeholder="CO" data-clear-btn="true"></input>
                     <label for="weather_city">City</label>
                     <input type="text" name="weather_city" id="weather_city" placeholder="Denver" data-clear-btn="true"></input>
-                    <label for="apiKey">API key for <a href="http://www.wunderground.com/weather/api/d/pricing.html" class="ui-btn ui-btn-inline">Wunderground.com </a></label>
-                    <input type="text" name="apiKey" id="apiKey" data-clear-btn="true"></input>
+                    <label for="weather_api_key">API key for <a href="http://www.wunderground.com/weather/api/d/pricing.html" class="ui-btn ui-btn-inline">Wunderground.com </a></label>
+                    <input type="text" name="weather_api_key" id="weather_api_key" data-clear-btn="true"></input>
                     
+                </div>        
+
+                <div data-role="collapsible" data-collapsed="true">
+                    <h1>Thing Speak</h1>
+                    <label for="doThingspeak">Enable ThingSpeak:</label>
+                    <input type="checkbox" data-role="flipswitch" name="doThingspeak" value=1 id="doThingspeak"></input>
+                    <label for="thingspeak_api_key">API key for <a href="http://thinkspeak.com" class="ui-btn ui-btn-inline">thingspeak.com </a> channel.</label>
+                    <input type="text" name="thingspeak_api_key" id="thingspeak_api_key" data-clear-btn="true"></input>
                 </div>        
 
                 <div data-role="collapsible" data-collapsed="true">

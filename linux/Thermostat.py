@@ -31,6 +31,7 @@ import threading
 import time
 import datetime
 import json
+import urllib
 import urllib2
 import os
 import sys
@@ -120,9 +121,12 @@ except:
         settings[day + "Night"] = 1320
         settings[day + "Morn"] = 360
     
-    settings["apiKey"] = ''
+    settings["weather_api_key"] = ''
     settings["weather_state"] = 'CO'
     settings["weather_city"] = 'Denver'
+
+    settings["doThingspeak"] = False
+    settings["thingspeak_api_key"] = ''
     
     # secret settings (not on the web page).
     settings["arduino_addr"] = "localhost"
@@ -145,6 +149,31 @@ def isPinging(host, max_tries = 10):
         if rv == 0: # zero means response
             return True
     return False
+
+def speak(data):
+    """ Record this data to thingspeak. """
+    channelData = {}
+    with settingsLock:
+        channelData['key'] = settings["thingspeak_api_key"]
+        if not settings['doThingspeak']:
+            # don't log to thing speak.
+            return
+    channelData['field1'] = data['temperature']
+    if data["outside_temp_updated"]:
+        channelData['field2'] = data['outside_temp']
+    channelData['field3'] = data['heat']
+    channelData['field4'] = data['heatSetPoint']
+    channelData['field5'] = data['cool']
+    channelData['field6'] = data['coolSetPoint']
+    channelData['field7'] = data['uptime_ms'] / 1000.0
+    channelData['field8'] = data['py_uptime_ms'] / 1000.0
+    headers = {
+        'Content-type': 'application/x-www-form-urlencoded',
+        'Accept': 'text/plain'
+    }
+    enc = urllib.urlencode(channelData)
+    req = urllib2.Request('https://api.thingspeak.com/update', enc, headers)
+    response = urllib2.urlopen(req)
 
 class QueryThread(threading.Thread):
     ''' This thread runs continuously regarless of the interaction with the user.'''
@@ -173,7 +202,7 @@ class QueryThread(threading.Thread):
                         apiKey = ""
                         weather_loc = ""
                         with settingsLock:
-                            apiKey = settings["apiKey"]
+                            apiKey = settings["weather_api_key"]
                             weather_loc = settings["weather_state"] + '/' + settings["weather_city"]
                         outsideData = json.load(urllib2.urlopen("http://api.wunderground.com/api/" + apiKey + "/conditions/q/" + weather_loc + ".json"))
                         self.outsideTemp = outsideData['current_observation']['temp_f']
@@ -217,6 +246,12 @@ class QueryThread(threading.Thread):
                 data["uptime_ms"] = heartbeat["uptime_ms"]
                 
                 log.info('Arduino (%.1fs) -- T: %.1f H: %.1f', data["lastUpdateTime"] / 1000.0, data["temperature"], data["humidity"])
+                
+                try:
+                    speak(data)
+                except Exception as e:
+                    log.exception(e)
+                    pass
     
                 with plotDataLock:
                     global plotData
@@ -428,10 +463,13 @@ def settings_post():
             settings[day + "Morn"] = int(request.forms.get(day + "Morn"))
             settings[day + "Night"] = int(request.forms.get(day + "Night"))
             
-        settings["apiKey"] = request.forms.get('apiKey')
+        settings["weather_api_key"] = request.forms.get('weather_api_key')
         settings["weather_state"] = request.forms.get('weather_state')
         settings["weather_city"] = request.forms.get('weather_city')
         
+        settings["doThingspeak"] = bool(request.forms.get('doThingspeak', False))
+        settings["thingspeak_api_key"] = request.forms.get('thingspeak_api_key')
+
         with open('settings.json', 'w') as fp:
             json.dump(settings, fp, sort_keys=True, indent=4)
 

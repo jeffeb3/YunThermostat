@@ -16,7 +16,7 @@ class SseWebLoop(threading.Thread):
         self.daemon = True
 
     def run(self):
-        self.web.run(debug=False, quiet=True)
+        self.web.run(host="0.0.0.0", debug=False, quiet=True)
 
 class SseLogHandler(lq.QueueHandler):
     ''' Handler to send sse events. '''

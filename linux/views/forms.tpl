@@ -33,10 +33,13 @@ $(document).ready(function()
             $("#email_restart").prop("checked", settings.email_restart);
             $("#email_oor").prop("checked", settings.email_oor);
 
-            $("#apiKey").val(settings.apiKey);
+            $("#weather_api_key").val(settings.weather_api_key);
             $("#weather_state").val(settings.weather_state);
             $("#weather_city").val(settings.weather_city);
             
+            $("#doThingspeak").prop("checked", settings.doThingspeak);
+            $("#thingspeak_api_key").val(settings.thingspeak_api_key);
+
             // update which GUI elements are enabled.
             updateEnabled();
         });
