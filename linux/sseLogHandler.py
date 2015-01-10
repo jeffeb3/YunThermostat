@@ -43,7 +43,9 @@ class SseLogHandler(lq.QueueHandler):
                 <meta charset="utf-8" />
 
                 <title>Server Sent Event Log Test</title>
-
+                <script src="https://code.jquery.com/jquery-1.11.2.min.js"></script>
+                <script src="https://code.jquery.com/mobile/1.4.5/jquery.mobile-1.4.5.min.js"></script>
+                <link rel="stylesheet" href="https://code.jquery.com/mobile/1.4.5/jquery.mobile-1.4.5.min.css">
                 <script language="javascript" type="text/javascript">
 
                     // Create server sent event connection.
@@ -51,33 +53,31 @@ class SseLogHandler(lq.QueueHandler):
 
                     function write(data)
                     {
-                        document.myform.outputtext.value += data
-                        document.myform.outputtext.scrollTop = document.myform.outputtext.scrollHeight;
+                        $("#log").append('<p>' + data + '</p>');
                     };
 
                     server.onmessage = function(e)
                     {
                         // Update measurement value.
-                        write(e.data + '\\n');
+                        write(e.data);
                     };
 
                     server.onopen = function(e)
                     {
-                        write('Connected.\\n');
+                        write('Connected.');
                     };
 
                     server.onerror = function(e)
                     {
-                        write('Disconnected.\\n');
+                        write('Disconnected.');
                     };
 
                 </script>
 
-                <form name="myform">
-                    <p>
-                        <textarea name="outputtext" rows="60" cols="80"></textarea>
-                    </p>
-                </form>
+                <div data-role="collapsible" data-collapsed="false" data-theme="b">
+                    <h1>Log</h1>
+                    <div id="log"></div>
+                </div>
 
                 </html>
                 """

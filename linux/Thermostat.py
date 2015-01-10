@@ -49,7 +49,7 @@ log = logging.getLogger('Thermostat')
 formatter = logging.Formatter("%(asctime)s - %(message)s", 
                               '%a, %d %b %Y %H:%M:%S')
 # also log to a set of files.
-fileHandler = logging.handlers.RotatingFileHandler('/var/log/thermostat.log', maxBytes=10000, backupCount=5, delay=True)
+fileHandler = logging.handlers.RotatingFileHandler('./thermostat.log', maxBytes=10000, backupCount=5, delay=True)
 fileHandler.setFormatter(formatter)
 log.addHandler(fileHandler)
 print '\n\nLogging to /var/log/thermostat.log\n\n'
@@ -73,7 +73,7 @@ from bottle import route, static_file, template, response, request
 from email_utils import sendemail
 
 web = Bottle()
-sseHandler = sseLogHandler.SseLogHandler(web)
+sseHandler = sseLogHandler.SseLogHandler(web, queueMaxSize = 25)
 sseHandler.setFormatter(formatter)
 log.addHandler(sseHandler)
 
