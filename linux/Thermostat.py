@@ -50,7 +50,7 @@ log = logging.getLogger('Thermostat')
 formatter = logging.Formatter("%(asctime)s - %(message)s", 
                               '%a, %d %b %Y %H:%M:%S')
 # also log to a set of files.
-fileHandler = logging.handlers.RotatingFileHandler('./thermostat.log', maxBytes=10000, backupCount=5, delay=True)
+fileHandler = logging.handlers.RotatingFileHandler('./thermostat.log', maxBytes=10 * 1000 * 1000, backupCount=5, delay=True)
 fileHandler.setFormatter(formatter)
 log.addHandler(fileHandler)
 print '\n\nLogging to /var/log/thermostat.log\n\n'

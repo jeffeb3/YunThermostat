@@ -20,6 +20,24 @@ from optparse import OptionParser
 # The interface to the google account
 import gspread
 
+import logging
+import logging.handlers
+
+# set up the logger
+log = logging.getLogger('Thermostat')
+# common formatter
+formatter = logging.Formatter("%(asctime)s - %(filename)s:%(lineno)d:%(message)s", 
+                              '%a, %d %b %Y %H:%M:%S')
+# also log to a set of files.
+fileHandler = logging.handlers.RotatingFileHandler('/var/log/daq.log', maxBytes=10000000, backupCount=5, delay=True)
+fileHandler.setFormatter(formatter)
+log.addHandler(fileHandler)
+print '\n\nLogging to /var/log/daq.log\n\n'
+## and to the console
+stdoutHandler = logging.StreamHandler(sys.stdout)
+log.addHandler(stdoutHandler)
+log.setLevel(logging.DEBUG)
+
 class daq(object):
     '''Utility class to record data to a google spreadsheet'''
     
@@ -60,15 +78,15 @@ class daq(object):
         except KeyboardInterrupt as e:
             raise e
         except gspread.exceptions.SpreadsheetNotFound as e:
-            print "The spreadsheet 'thermodaq' was not found. Please create it (I can't)."
+            log.exception("The spreadsheet 'thermodaq' was not found. Please create it (I can't).", e)
             raise e
         except gspread.exceptions.AuthenticationError as e:
-            print "Invalid Username and Password"
+            log.exception("Invalid Username and Password", e)
             raise e
-        except:
+        except Exception as e:
             # I shouldn't swallow exceptions, but this thing is buggy...
             self.problems += 1
-            print 'problem posting to gspread'
+            log.exception(e)
             pass
     
     def getClient(self):
@@ -106,20 +124,25 @@ if __name__ == '__main__':
     (options, args) = parser.parse_args()
     
     if options.username == None or options.password == None or options.ip == None:
-        print 'You have to supply a username, password, and an ip'
+        log.error('You have to supply a username, password, and an ip')
         parser.print_help()
         sys.exit(1)
 
     dataAcq = daq(options.username, options.password)
     addr = "http://" + options.ip + ":8080/data.json"
-    print 'connecting to: ' + addr
-    count = 0    
+    log.info('connecting to: ' + addr)
+    count = 0
+    prevTime = 0
     while True:
         startTime = time.time()
         try:
             data = json.load(urllib2.urlopen(addr))
+            if data["time"] == prevTime:
+                time.sleep(1)
+                continue
+            prevTime = data["time"]
         except urllib2.URLError:
-            print "The server (%s) isn't responding." % addr
+            log.warning("The server (%s) isn't responding." % addr)
             time.sleep(600)
             continue
         if data == None:
@@ -129,7 +152,7 @@ if __name__ == '__main__':
         dataAcq.append(data)
         count += 1
         if count % 100 == 0:
-            print '%d sent' % count 
+            log.info('%d sent' % count)
         seconds_left = 30.0 - (time.time() - startTime)
         if seconds_left > 0.0:
             time.sleep(30.0 - (time.time() - startTime))
