@@ -58,6 +58,7 @@ class Thermostat(threading.Thread):
         Main loop for the thermostat project. Reads data from external sources,
         updates internal data, and sends data out to data recorders.
         """
+        self.log.info('Starting the Thermostat Thread');
         while True:     # Forever
             # this try...except block is to log all exceptions. It's in this
             # while loop because the while loop should recover.
@@ -111,14 +112,14 @@ class Thermostat(threading.Thread):
                 
                 self.log.info('Arduino (%.1fs) -- T: %.1f H: %.1f', data["lastUpdateTime"] / 1000.0, data["temperature"], data["humidity"])
                 
+                with self.plotDataLock:
+                    self.plotData.append(data)
+                    self.plotData = self.plotData[-2880:] # clip to 24 hours
+    
                 try:
                     self.speak()
                 except Exception as e:
                     self.log.exception(e)
-    
-                with self.plotDataLock:
-                    self.plotData.append(data)
-                    self.plotData = self.plotData[-2880:] # clip to 24 hours
     
                 # Calculate what the set point should be
                 setRange = self.getSetTemperatureRange()

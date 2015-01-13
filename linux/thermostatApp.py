@@ -38,6 +38,7 @@ if __name__ == '__main__':
     
     settings.Load('settings.json')
     settings.FillEmptiesWithDefaults()
+    settings.Save('settings.json')
 
     # create a Thermostat
     t = Thermostat.Thermostat()
