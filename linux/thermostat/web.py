@@ -2,6 +2,7 @@
 # system imports
 import json
 import logging
+import logging.handlers
 import os
 import socket
 from smtplib import SMTPAuthenticationError, SMTPResponseException, SMTPRecipientsRefused
@@ -25,6 +26,8 @@ class Web(object):
         """
 
         self.log = logging.getLogger('thermostat.Web')
+        self.emailHandler = None
+        self.updateEmailHandler()
         
         self.web = Bottle()
         self.thermostat = thermostat
@@ -153,7 +156,25 @@ class Web(object):
             settings.Set(day + "Morn",  int(request.forms.get(day + "Morn")))
             settings.Set(day + "Night",  int(request.forms.get(day + "Night")))
     
+        self.updateEmailHandler()
+        
         settings.Save('settings.json')
+
+    def updateEmailHandler(self):
+        if self.emailHandler is not None:
+            logging.getLogger().removeHandler(self.emailHandler)
+            self.emailHandler = None
+        if settings.Get("doEmail"):
+            self.emailHandler = logging.handlers.SMTPHandler(tuple(str(settings.Get('smtp')).split(':')),
+                                                             settings.Get('email_from'),
+                                                             settings.Get('email_to').split(','),
+                                                             'Thermostat Log',
+                                                             credentials=(settings.Get('email_from'), settings.Get('email_passw')),
+                                                             secure=tuple())
+            self.emailHandler.setFormatter(logging.Formatter('%(levelname)s from %(threadName)s:%(process)d\n%(asctime)s\n%(name)s - %(filename)s:%(lineno)d\n\n%(message)s',
+                                                             '%A %B %d, %Y - %H:%M:%S'))
+            self.emailHandler.setLevel(logging.CRITICAL)
+            logging.getLogger().addHandler(self.emailHandler)
     
     def javascriptCallback(self, path):
     
