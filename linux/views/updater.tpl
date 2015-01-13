@@ -39,16 +39,6 @@ $(document).ready(function()
         {
             label: "Update Time",
             data: {{updateTimeHistory}}
-        },
-        {
-            label: "Flappy Ping",
-            data: {{flappyPingHistory}},
-            yaxis: 2
-        },
-        {
-            label: "Phone Ping",
-            data: {{phonePingHistory}},
-            yaxis: 2
         }
     ];
     
@@ -122,13 +112,6 @@ $(document).ready(function()
             {
                 tickFormatter: msToText,
                 min : 0
-            },
-            {
-                alignTicksWithAxis: 1,
-                position: "right",
-                ticks: [[0,"Fail"], [1,"OK"]],
-                min: -0.1,
-                max: 1.1
             }],
             legend:
             {
@@ -151,8 +134,6 @@ $(document).ready(function()
             }
             temperaturePlotData[2].data.push([data.time - {{timezone}},data.heat]);
             healthPlotData[0].data.push([data.time - {{timezone}},data.lastUpdateTime]);
-            healthPlotData[1].data.push([data.time - {{timezone}},data.flappy_ping]);
-            healthPlotData[2].data.push([data.time - {{timezone}},data.phone_ping]);
                         
             tempPlot.setData(temperaturePlotData);
             tempPlot.setupGrid();
@@ -220,7 +201,8 @@ $(document).ready(function()
 
     function writeLog(data)
     {
-        $("#log").append('<p>' + data + '</p>');
+        $("#appendLogs").append(data);
+        $("#logTable").table("refresh");
     };
 
     log_server.onmessage = function(e)
@@ -231,12 +213,24 @@ $(document).ready(function()
 
     log_server.onopen = function(e)
     {
-        writeLog('Connected.');
+        writeLog('<tr>' +
+                 '<th class="logLevelINFO">INFO</th>' +
+                 '<td class="logMessage">Connected</td>' +
+                 '<td class="logTime"></td>' +
+                 '<td class="logName"></td>' +
+                 '<td class="logFile"></td>' +
+                 '</tr>');
     };
 
     log_server.onerror = function(e)
     {
-        writeLog('Disconnected.');
+        writeLog('<tr>' +
+                 '<th class="logLevelINFO">INFO</th>' +
+                 '<td class="logMessage">Disconnected</td>' +
+                 '<td class="logTime"></td>' +
+                 '<td class="logName"></td>' +
+                 '<td class="logFile"></td>' +
+                 '</tr>');
     };
 });
 

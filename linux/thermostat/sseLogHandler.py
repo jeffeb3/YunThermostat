@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+import logging
 import logutils.queue as lq
 import Queue
 import threading
@@ -35,6 +36,8 @@ class SseLogHandler(lq.QueueHandler):
 
         self.web.route('/log_view', 'GET', self.log_view)
         self.web.route('/logs', 'GET', self.logs)
+        
+        self.setFormatter(logging.Formatter('<p>%(asctime)s:%(name)s:%(levelname)s:%(message)s</p>'))
 
     def log_view(self):
         return """
@@ -53,7 +56,7 @@ class SseLogHandler(lq.QueueHandler):
 
                     function write(data)
                     {
-                        $("#log").append('<p>' + data + '</p>');
+                        $("#log").append(data);
                     };
 
                     server.onmessage = function(e)

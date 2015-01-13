@@ -35,3 +35,33 @@
 {
     margin: 0 5px; !important
 }
+
+.logLevelCRITICAL
+{
+    color: RED !important;
+}
+
+.logLevelERROR
+{
+    color: RED !important;
+}
+
+.logLevelWARNING
+{
+    color: orange !important;
+}
+
+.logLevelINFO
+{
+    color: #008ED6 !important;
+}
+
+.logLevelDEBUG
+{
+    color: green !important;
+}
+
+.logTime
+{
+    color: light-yellow !important;
+}

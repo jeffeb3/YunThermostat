@@ -5,14 +5,24 @@ YunThermostat
 
 Developing a thermosatat running on the Arduino Yun
 
-arduino_setup.txt has instructions for setting up the Arduino Yun.
+Unfortunately, I just reogranized everything, and I'm not up to date on the docs, so I'm going to just leave this blank for now.
 
-thermostat.ino is the sketch that gets loaded onto the Atmega side of the Arduino Yun
+TODO:
+=====
+ - Update the docs
+   - Expore using another webpage, such as ReadTheDocs to do my documentation.
+ - Weather test button
+ - Organize the Thermostat.py code.
+ - Override from the web, temporary, vacation, etc.
+ - Fix the lower time range on the config page.
+ - watchdogs on the atmega and the arm with reboots
+ - email alerts for resets/errors
+ - command line arguments
+ - Error handling, especially:
+   - imports
+   - urls
+   - settings
+ - dropbox integration.
+ - GPS fencing
 
-linux contains the script that will run on the OpenWRT or Linux side of the Arduino Yun.
 
-linux/Thermostat.py is the main python function that queries the atmega side, and provides a web interface.
-
-linux/views is the folder with web templates for the python web interface.
-
-linux/javascript is a link to the javascript libraries stored on this machine. (/usr/share/javascipt).

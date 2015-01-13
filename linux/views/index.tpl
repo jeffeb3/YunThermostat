@@ -72,7 +72,26 @@
 
                 <div data-role="collapsible" data-collapsed="true">
                     <h1>Log</h1>
-                    <div id="log"></div>
+                    <table data-role="table" data-mode="columntoggle" class="ui-responsive table-stroke" id="logTable">
+                        <thead>
+                            <tr>
+                                <th data-priority="3">Level</th>
+                                <th data-priority="1">Message</th>
+                                <th data-priority="5">Time</th>
+                                <th data-priority="5">Log Name</th>
+                                <th data-priority="5">Source</th>
+                            </tr>
+                        </thead>
+                        <tbody id="appendLogs">
+                            <tr>
+                                <th class="logLevelINFO">INFO</th>
+                                <td class="logMessage">Browser Started</td>
+                                <td class="logTime"></td>
+                                <td class="logName"></td>
+                                <td class="logFile"></td>
+                            </tr>
+                        </tbody>
+                    </table>
                 </div>
 
             </div>
