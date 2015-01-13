@@ -1,134 +1,213 @@
 #!/usr/bin/env python
 
-import logging
-import logutils.queue as lq
-import Queue
 import threading
+import Queue
+import collections
+import logging
 from bottle import Bottle, response, template
 
 # The intention is to allow a connection to a log via a local http server.
 # I'd like it to use bottle _or_ flask, if possible.
 #
 
-class SseWebLoop(threading.Thread):
-    def __init__(self, web):
-        threading.Thread.__init__(self)
-        self.web = web
-        self.daemon = True
-
-    def run(self):
-        self.web.run(host="0.0.0.0", debug=False, quiet=True)
-
-class SseLogHandler(lq.QueueHandler):
+class SseLogHandler(logging.Handler):
     ''' Handler to send sse events. '''
 
     def __init__(self,
-                 bottleApp=None,
                  queueMaxSize=32):
-        lq.QueueHandler.__init__(self, Queue.Queue(queueMaxSize))
-        
-        self.web = bottleApp
-        self.webLoop = None
-        if self.web is None:
-            self.web = Bottle()
-            self.webLoop = SseWebLoop(self.web)
-            self.webLoop.start()
+        logging.Handler.__init__(self)
 
-        self.web.route('/log_view', 'GET', self.log_view)
-        self.web.route('/logs', 'GET', self.logs)
-        
-        self.setFormatter(logging.Formatter('<p>%(asctime)s:%(name)s:%(levelname)s:%(message)s</p>'))
+        self._history = collections.deque(maxlen=queueMaxSize)
+        self._lock = threading.RLock()
+        self._clients = []
 
-    def log_view(self):
+    @staticmethod
+    def log_view():
+        """
+        Return an example web page that could be used to render the log messages.
+
+        Use with a normal text formatter for best results.
+
+        Connect to your bottle server like this:
+        app.route('/log_view','GET',SseLogHandler.log_view)
+        """
         return """
-                <!DOCTYPE html>
+            <!DOCTYPE html>
 
-                <meta charset="utf-8" />
+            <meta charset="utf-8" />
 
-                <title>Server Sent Event Log Test</title>
-                <script src="https://code.jquery.com/jquery-1.11.2.min.js"></script>
-                <script src="https://code.jquery.com/mobile/1.4.5/jquery.mobile-1.4.5.min.js"></script>
-                <link rel="stylesheet" href="https://code.jquery.com/mobile/1.4.5/jquery.mobile-1.4.5.min.css">
-                <script language="javascript" type="text/javascript">
+            <title>Server Sent Event Log Test</title>
+            <script src="http://code.jquery.com/jquery-1.11.2.min.js"></script>
+            <script src="http://code.jquery.com/mobile/1.4.5/jquery.mobile-1.4.5.min.js"></script>
+            <link rel="stylesheet" href="http://code.jquery.com/mobile/1.4.5/jquery.mobile-1.4.5.min.css">
+            <script language="javascript" type="text/javascript">
 
-                    // Create server sent event connection.
-                    var server = new EventSource('/logs');
+                // Create server sent event connection.
+                var server = new EventSource('/logs');
 
-                    function write(data)
-                    {
-                        $("#log").append(data);
-                    };
+                function write(data)
+                {
+                    $("#log").append('<p>' + data + '</p>');
+                };
 
-                    server.onmessage = function(e)
-                    {
-                        // Update measurement value.
-                        write(e.data);
-                    };
+                server.onmessage = function(e)
+                {
+                    // Update measurement value.
+                    write(e.data);
+                };
 
-                    server.onopen = function(e)
-                    {
-                        write('Connected.');
-                    };
+                server.onopen = function(e)
+                {
+                    write('Connected.');
+                };
 
-                    server.onerror = function(e)
-                    {
-                        write('Disconnected.');
-                    };
+                server.onerror = function(e)
+                {
+                    write('Disconnected.');
+                };
 
-                </script>
+            </script>
 
-                <div data-role="collapsible" data-collapsed="false" data-theme="b">
-                    <h1>Log</h1>
-                    <div id="log"></div>
-                </div>
+            <div data-role="collapsible" data-collapsed="false" data-theme="b">
+                <h1>Log</h1>
+                <div id="log"></div>
+            </div>
 
-                </html>
-                """
+            </html>
+            """
 
     def logs(self):
+        """
+        Returns a server sent event stream of log messages.
+
+        Connect to your bottle server like this:
+        app.route('/logs','GET',sseHandler.logs)
+
+        Connect your browser to http://<server>:<port>/log_view
+        """
         response.content_type = 'text/event-stream'
+
+        q = Queue.Queue(10) # Should never be more than 1.
+        with self._lock:
+            # return the history upto this point.
+            for record in self._history:
+                yield 'data:' + '\ndata:'.join(self.format(record).split('\n')) + '\n\n'
+            # add a q for this client.
+            self._clients.append(q)
+
         while True:    # TODO Make this based on some kind of while alive event.
             try:
                 # only look for one seconds, because we are hoping to escape
                 # this loop with something logical.
-                data = self.queue.get(True, 1)
-                text = 'data:' + '\ndata:'.join(self.format(data).split('\n')) + '\n\n'
-                yield text
+                data = q.get(True, 1.0)
+                yield 'data:' + '\ndata:'.join(self.format(data).split('\n')) + '\n\n'
             except Queue.Empty:
                 continue
 
-        print 'exited logs loop'
+        with self._lock:
+            self._clients.remove(q)
         raise StopIteration
 
     def enqueue(self, record):
         """
-        Override the QueueHandler to make it clean records out if they are full.
+        Enqueue a record.
 
-        The client of the SSE server may not be connected for a while, but we
-        still want them to get some of the previous results. by making sure the
-        events get onto the queue, even if full, we will ensure that the only
-        information stored in the queue is recent.
+        The base implementation uses :meth:`~queue.Queue.put_nowait`. You may
+        want to override this method if you want to use blocking, timeouts or
+        custom queue implementations.
+
+        :param record: The record to enqueue.
+        """
+        with self._lock:
+            self._history.append(record)
+            for q in self._clients:
+                try:
+                    q.put_nowait(record)
+                except Queue.Full:
+                    # there is no room on the queue, lets remove one, and enqueue again.
+                    discard = q.get_nowait()
+                    # if this method fails with Full, then too bad.
+                    q.put_nowait(record)
+
+    def prepare(self, record):
+        """
+        Prepares a record for queuing. The object returned by this method is
+        enqueued.
+
+        The base implementation formats the record to merge the message
+        and arguments, and removes unpickleable items from the record
+        in-place.
+
+        You might want to override this method if you want to convert
+        the record to a dict or JSON string, or send a modified copy
+        of the record while leaving the original intact.
+
+        :param record: The record to prepare.
+        """
+        # The format operation gets traceback text into record.exc_text
+        # (if there's exception data), and also puts the message into
+        # record.message. We can then use this to replace the original
+        # msg + args, as these might be unpickleable. We also zap the
+        # exc_info attribute, as it's no longer needed and, if not None,
+        # will typically not be pickleable.
+        self.format(record)
+        record.msg = record.message
+        record.args = None
+        record.exc_info = None
+        return record
+
+    def emit(self, record):
+        """
+        Emit a record.
+
+        Writes the LogRecord to the queue, preparing it for pickling first.
+
+        :param record: The record to emit.
         """
         try:
-            lq.QueueHandler.enqueue(self, record)
-        except Queue.Full:
-            # there is no room on the queue, lets remove one, and enqueue again.
-            discard = self.queue.get_nowait()
-            # if this method fails with Full, then too bad.
-            lq.QueueHandler.enqueue(self, record)
+            self.enqueue(self.prepare(record))
+        except (KeyboardInterrupt, SystemExit):
+            raise
+        except:
+            self.handleError(record)
 
 if __name__ == '__main__':
-    import logging
     import time
-    import signal
 
-    sse_handler = SseLogHandler(queueMaxSize=10)
+    class LogLoop(threading.Thread):
+        def __init__(self):
+            threading.Thread.__init__(self)
+            self.daemon = True
 
-    log = logging.getLogger()
+        def run(self):
+            while True:
+                log.warn('warning')
+                time.sleep(1)
+
+    sse_handler = SseLogHandler(queueMaxSize=100)
+    log = logging.getLogger() # root logger
+    log.setLevel(logging.DEBUG)
     log.addHandler(sse_handler)
-
     sse_handler.setFormatter(logging.Formatter('%(asctime)s: %(message)s'))
 
-    while True:
-        log.warn('warning')
-        time.sleep(1)
+    lthread = LogLoop()
+    lthread.start()
+
+    # set up a web server
+    app = Bottle()
+    app.route('/','GET',SseLogHandler.log_view)
+    app.route('/logs','GET',sse_handler.logs)
+
+    try:
+        import pastey
+        log.info('running with paste')
+        app.run(debug=True, server='paste')
+    except ImportError:
+        try:
+            import gevent
+            log.info('running with gevent')
+            app.run(debug=True, server='paste')
+        except ImportError:
+            log.info('running with bottle, only one page can be viewed at a time')
+            app.run(debug=True)
+    

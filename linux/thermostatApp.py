@@ -28,25 +28,13 @@ if __name__ == '__main__':
     fileHandler.setFormatter(formatter)
     log.addHandler(fileHandler)
     print '\n\nLogging to /var/log/thermostatApp.log\n\n'
+
     # and to the console
     stdoutHandler = logging.StreamHandler(sys.stdout)
     log.addHandler(stdoutHandler)
-
-    log.setLevel(logging.INFO)
-
-    log.info('Started at %s', str(datetime.datetime.now()))
     
-    settings.Load('settings.json')
-    settings.FillEmptiesWithDefaults()
-    settings.Save('settings.json')
-
-    # create a Thermostat
-    t = Thermostat.Thermostat()
-
-    # create the web
-    w = web.Web(t)
-
-    sseHandler = sseLogHandler.SseLogHandler(w.web, queueMaxSize = 25)
+    # and to the web page.
+    sseHandler = sseLogHandler.SseLogHandler(queueMaxSize = 25)
     sseFormat = '<tr>'
     sseFormat += '<th class="logLevel%(levelname)s ui-table-priority-3" style="color:red">%(levelname)s</th>'
     sseFormat += '<td class="logMessage ui-table-priority-1">%(message)s</td>'
@@ -57,12 +45,23 @@ if __name__ == '__main__':
     sseHandler.setFormatter(logging.Formatter(sseFormat))
     log.addHandler(sseHandler)
 
-    log.info('test')
+    log.setLevel(logging.INFO)
+    log.info('Started at %s', str(datetime.datetime.now()))
+    
+    settings.Load('settings.json')
+    settings.FillEmptiesWithDefaults()
+    settings.Save('settings.json')
+
+    # create a Thermostat
+    t = Thermostat.Thermostat()
 
     # start the thread
     t.start()
     
     # start the web server
+    w = web.Web(t)
+    w.web.route('/logs','GET',sseHandler.logs)
+    w.web.route('/log_view','GET',sseLogHandler.SseLogHandler.log_view)
     w.run()
 
     log.critical("Exiting, but I'm supposed to live forever")
