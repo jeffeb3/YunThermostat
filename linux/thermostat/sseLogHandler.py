@@ -17,9 +17,10 @@ class SseLogHandler(logging.Handler):
                  queueMaxSize=32):
         logging.Handler.__init__(self)
 
-        self._history = collections.deque(maxlen=queueMaxSize)
         self._lock = threading.RLock()
-        self._clients = []
+        with self._lock:
+            self._history = collections.deque(maxlen=queueMaxSize)
+            self._clients = []
 
     @staticmethod
     def log_view():

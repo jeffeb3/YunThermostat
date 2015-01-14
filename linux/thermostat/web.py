@@ -51,6 +51,8 @@ class Web(object):
         response.content_type = 'text/event-stream'
         
         previous_time = 0
+
+        self.log.info('Starting measurements stream to %s', request.remote_addr)
     
         while True:
             # Send the data to the web page in the server sent event format.
@@ -96,7 +98,8 @@ class Web(object):
             return "Problem with recipient (%s):" % email_to
         except socket.error as err:
             return "Error connecting to '%s'" % smtp + " maybe you need the port (like smtp.gmail.com:587)"
-        
+
+        self.log.info("Successful Email Test");        
         return str(problems)
 
     @staticmethod    
@@ -117,10 +120,10 @@ class Web(object):
     def action(self):
         ''' This method gets called from the ajax calls in javascript to do things from the forms. '''
         id = request.forms.get('id')
-        print id
+        self.log.info('POST at id:"%s"', id)
         
         if 'Enable' in id:
-            print request.forms.get('value')
+            self.log.info('Value:"%s"', request.forms.get('value'))
         
     def settings_post(self):
         ''' When the user "saves" their settings on the ConfigurePage. '''
@@ -159,6 +162,8 @@ class Web(object):
         self.updateEmailHandler()
         
         settings.Save('settings.json')
+
+        self.log.info("Saved settings from client: %s", request.remote_addr )
 
     def updateEmailHandler(self):
         if self.emailHandler is not None:

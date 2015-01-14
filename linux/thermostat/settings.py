@@ -102,7 +102,7 @@ def Set(settingName, value):
     raises KeyError when the name isn't present.
     """
     with settingsLock:
-        if value not in settings.keys():
+        if settingName not in settings.keys():
             raise KeyError
         
         settings[settingName] = value

@@ -168,7 +168,7 @@ $(document).ready(function()
         var morning = minuteToText(sliders.first().val());
         var night = minuteToText(sliders.last().val());
         var row = $(this).closest("tr");
-        row.find(".morning-time").val(morning);
+        row.find(".morning-time").text(morning);
         row.find(".night-time").text(night);
     }
     $(".no-number").change(sliderTime);
