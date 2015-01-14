@@ -66,6 +66,8 @@ def FillEmptiesWithDefaults():
 
     default_settings["doThingspeak"] = False
     default_settings["thingspeak_api_key"] = ''
+    default_settings["thingspeak_location_api_key"] = ''
+    default_settings["thingspeak_location_channel"] = ''
     
     # secret settings (not on the web page).
     default_settings["arduino_addr"] = "localhost"

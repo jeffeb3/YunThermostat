@@ -38,6 +38,7 @@ class Thermostat(threading.Thread):
         # run these events right away.
         self.lastLoopTime = 0
         self.lastOutsideMeasurementTime = 0
+        self.lastAwayMeasurementTime = 0
 
         # state
         self.sleeping = False
@@ -150,10 +151,25 @@ class Thermostat(threading.Thread):
             # we went back to sleep
             self.sleeping = True
         
+        if ((time.time() - self.lastAwayMeasurementTime) > 360):
+            try:
+                url = 'http://api.thingspeak.com/channels/' + settings.Get('thingspeak_location_channel') + '/feeds/last.json'
+                url += '?key=' + settings.Get('thingspeak_location_api_key')
+                self.away = ("0" == json.load(urllib2.urlopen(url))['field1'])
+                self.log.info('Retrieved away status:' + str(self.away))
+                self.lastAwayMeasurementTime = time.time()
+            except Exception as e:
+                # swallow any exceptions, we don't want the thermostat to break if there is no Internet
+                self.log.exception(e)
+                pass
+
         if self.sleeping:
             return (settings.Get("heatTempSleeping"), settings.Get("coolTempSleeping"))
         else:
-            return (settings.Get("heatTempComfortable"), settings.Get("coolTempComfortable"))
+            if self.away:
+                return (settings.Get("heatTempComfortable"), settings.Get("coolTempComfortable"))
+            else:
+                return (settings.Get("heatTempAway"), settings.Get("coolTempAway"))
 
     def speak(self):
         """ Record last data to thingspeak. """

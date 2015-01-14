@@ -154,6 +154,8 @@ class Web(object):
     
         settings.Set("doThingspeak",  bool(request.forms.get('doThingspeak', False)))
         settings.Set("thingspeak_api_key",  request.forms.get('thingspeak_api_key'))
+        settings.Set("thingspeak_location_api_key",  request.forms.get('thingspeak_location_api_key'))
+        settings.Set("thingspeak_location_channel",  request.forms.get('thingspeak_location_channel'))
     
         for day in settings.DAYS:
             settings.Set(day + "Morn",  int(request.forms.get(day + "Morn")))

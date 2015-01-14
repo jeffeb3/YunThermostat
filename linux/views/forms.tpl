@@ -39,6 +39,8 @@ $(document).ready(function()
             
             $("#doThingspeak").prop("checked", settings.doThingspeak);
             $("#thingspeak_api_key").val(settings.thingspeak_api_key);
+            $("#thingspeak_location_api_key").val(settings.thingspeak_location_api_key);
+            $("#thingspeak_location_channel").val(settings.thingspeak_location_channel);
 
             // update which GUI elements are enabled.
             updateEnabled();
