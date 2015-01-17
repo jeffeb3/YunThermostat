@@ -143,20 +143,30 @@ class Thermostat(threading.Thread):
         minutes = now.minute + 60*now.hour
         if minutes < wakeUp:
             # we are still asleep
+            if not self.sleeping:
+                self.log.info('Started Sleeping')
             self.sleeping = True
         elif minutes < sleep:
             # we are just waking up
+            if self.sleeping:
+                self.log.info('Stopped Sleeping')
             self.sleeping = False
         else:
             # we went back to sleep
+            if not self.sleeping:
+                self.log.info('Started Sleeping')
             self.sleeping = True
         
         if ((time.time() - self.lastAwayMeasurementTime) > 360):
             try:
                 url = 'http://api.thingspeak.com/channels/' + settings.Get('thingspeak_location_channel') + '/feeds/last.json'
                 url += '?key=' + settings.Get('thingspeak_location_api_key')
-                self.away = ("0" == json.load(urllib2.urlopen(url))['field1'])
-                self.log.info('Retrieved away status:' + str(self.away))
+                new_away = ("0" == json.load(urllib2.urlopen(url))['field1'])
+                if new_away != self.away:
+                    if new_away:
+                        self.log.info('Setting to away')
+                    else:
+                        self.log.info('Setting to home')
                 self.lastAwayMeasurementTime = time.time()
             except Exception as e:
                 # swallow any exceptions, we don't want the thermostat to break if there is no Internet
@@ -167,9 +177,9 @@ class Thermostat(threading.Thread):
             return (settings.Get("heatTempSleeping"), settings.Get("coolTempSleeping"))
         else:
             if self.away:
-                return (settings.Get("heatTempComfortable"), settings.Get("coolTempComfortable"))
-            else:
                 return (settings.Get("heatTempAway"), settings.Get("coolTempAway"))
+            else:
+                return (settings.Get("heatTempComfortable"), settings.Get("coolTempComfortable"))
 
     def speak(self):
         """ Record last data to thingspeak. """
