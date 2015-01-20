@@ -22,6 +22,7 @@
 #define LCD_PIN_3 5
 #define LCD_PIN_4 6
 #define LCD_PIN_5 7
+#define LCD_BACKLIGHT_PIN 10
 
 // Pin where the LCD buttons are attached
 #define LCD_BUTTONS_PIN 0

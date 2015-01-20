@@ -26,12 +26,17 @@ public:
     inline void StatusDisplay();
     
     inline int GetButton();
+    
+    // Quickly update the backlight.
+    inline void FastUpdate();
 
 private:
     LiquidCrystal lcd;
     unsigned long lastPythonUpdateMillis;
     char twiddle;
     int lastButton;
+    unsigned long lastDrawTime;
+    volatile unsigned long lastButtonPressTime;
 };
 
 Display::Display() :
@@ -42,16 +47,20 @@ Display::Display() :
         LCD_PIN_4,
         LCD_PIN_5),
     lastPythonUpdateMillis(millis()),
-    twiddle(' ')
+    twiddle(' '),
+    lastButton(255),
+    lastDrawTime(0),
+    lastButtonPressTime(0)
 {
     // set up the LCD's number of columns and rows:
     lcd.begin(16, 2);
-
+    pinMode(LCD_BACKLIGHT_PIN, OUTPUT);
+    digitalWrite(LCD_BACKLIGHT_PIN, HIGH);
     OnetimeDisplay("LCD", "Initialized");
 }
 
 inline void Display::OnetimeDisplay(char* pFirstRow,
-                                              char* pSecondRow)
+                                    char* pSecondRow)
 {
     lcd.setCursor(0,0);
     lcd.print(pFirstRow);
@@ -61,6 +70,12 @@ inline void Display::OnetimeDisplay(char* pFirstRow,
 
 inline void Display::StatusDisplay()
 {
+    if ((millis() - lastDrawTime) < 1000)
+    {
+        return;
+    }
+    lastDrawTime = millis();
+
     // Do LCD display stuff
     lcd.setCursor(0,0);
     lcd.print(F("T:"));
@@ -110,6 +125,31 @@ inline void Display::StatusDisplay()
     lastPythonUpdateMillis = pythonUpdateMillis;
 }
 
+inline void Display::FastUpdate()
+{
+    const unsigned long ONTIME_MS = 10 * 1000;
+    const unsigned long DIMTIME_MS = 2 * 1000;
+    const unsigned long BRIGHT = 255;
+    const unsigned long DIM = 96;
+    unsigned long backlight_timer = millis() - lastButtonPressTime;
+    if (backlight_timer < ONTIME_MS)
+    {
+        gammaWrite(LCD_BACKLIGHT_PIN, BRIGHT);
+    }
+    else
+    {
+        backlight_timer -= ONTIME_MS;
+        if (backlight_timer < DIMTIME_MS)
+        {
+            gammaWrite(LCD_BACKLIGHT_PIN, BRIGHT - ((backlight_timer * (BRIGHT-DIM))/DIMTIME_MS));
+        }
+        else
+        {
+            gammaWrite(LCD_BACKLIGHT_PIN, DIM);
+        }
+    }
+}
+
 inline int Display::GetButton()
 {
     int keypress;
@@ -145,6 +185,10 @@ inline int Display::GetButton()
     {
         return LCD_BUTTON_NO_BUTTON;
     }
+
+    // we have a button press. force drawing.
+    lastDrawTime = 0;
+    lastButtonPressTime = millis();
     
     lastButton = button;
     return button;

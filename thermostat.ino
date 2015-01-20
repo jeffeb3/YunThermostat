@@ -32,6 +32,19 @@ Sensor sensor;
 Display display;
 Web web;
 
+SIGNAL(TIMER0_COMPA_vect)
+{
+    // This is the interrupt service routine for fast updates.
+    //
+    // This gets called once per millisecond.
+    //
+    // Don't put anything really long in here, such as external comms.
+    //
+    // Don't use delay.
+    //
+    display.FastUpdate();
+}
+
 void setup() 
 {
     // set the initial message to use during setup.
@@ -53,6 +66,11 @@ void setup()
     // Clear the initial message now that we are set up.    
     display.OnetimeDisplay("                ",
                            "                ");
+
+    // When the counter passes this number, call the ISR
+    OCR0A = 0xAF;
+    // Interrupt Enable on timer 0, compare A. This always calls via TIMER0_COMPA_vect
+    TIMSK0 |= _BV(OCIE0A);
 }
 
 void loop() 
