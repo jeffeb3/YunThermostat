@@ -47,6 +47,9 @@ private:
     // time since the last read
     unsigned long lastReadTimeMillis;
     
+    // time since the last update.
+    unsigned long lastUpdateTimeMillis;
+    
     float prevHeatSetPoint;
     float prevCoolSetPoint;
     
@@ -57,6 +60,7 @@ private:
 };
 
 Web::Web() :
+    lastUpdateTimeMillis(0),
     prevHeatSetPoint(HEAT_TEMP_DETACHED),
     prevCoolSetPoint(COOL_TEMP_DETACHED)
 {
@@ -75,6 +79,12 @@ void Web::Setup()
 
 void Web::Update()
 {
+    if ((millis() - lastUpdateTimeMillis) < 1000)
+    {
+        return;
+    }
+    lastUpdateTimeMillis = millis();
+    
     // Get clients coming from server
     YunClient client = server.accept();
 

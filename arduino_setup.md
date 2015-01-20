@@ -22,7 +22,6 @@ easy_install pip #installs pip
 
 pip install paste
 pip install bottle
-pip install logutils
 
 install:
 

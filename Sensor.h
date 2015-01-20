@@ -36,10 +36,15 @@ public:
         lastUpdateMillis(millis())
     {
         // Use the pins to power the DHT. It's easier than using jumpers
+        #ifdef DHT_VCC_PIN
         pinMode(DHT_VCC_PIN,OUTPUT);
-        pinMode(DHT_GND_PIN,OUTPUT);
         digitalWrite(DHT_VCC_PIN,HIGH);
+        #endif
+
+        #ifdef DHT_GND_PIN
+        pinMode(DHT_GND_PIN,OUTPUT);
         digitalWrite(DHT_GND_PIN,LOW);
+        #endif
     }
     
     // Call this function frequently, it will not hurt to call it too

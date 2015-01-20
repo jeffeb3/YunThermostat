@@ -5,6 +5,7 @@
 //-----------------------------------------------------------
 #include "Config.h"
 #include "Util.h"
+#include "Control.h"
 #include "Sensor.h"
 #include "Display.h"
 #include "Web.h"
@@ -31,6 +32,7 @@
 Sensor sensor;
 Display display;
 Web web;
+Control control;
 
 SIGNAL(TIMER0_COMPA_vect)
 {
@@ -42,24 +44,23 @@ SIGNAL(TIMER0_COMPA_vect)
     //
     // Don't use delay.
     //
+    control.FastUpdate();
     display.FastUpdate();
 }
 
 void setup() 
 {
+    delay(2500);
     // set the initial message to use during setup.
     display.OnetimeDisplay("Waiting for the ",
                            "Bridge          ");
 
-    // Set up to toggle the builtin LED.
-    pinMode(HEAT_PIN, OUTPUT);
-    pinMode(COOL_PIN, OUTPUT);
-  
     // Bridge startup, make the L13 LED go on, then initialize, then off.
     Bridge.begin();
 
     Bridge.put("heatSetPoint", String(HEAT_TEMP_DETACHED));
     Bridge.put("coolSetPoint", String(COOL_TEMP_DETACHED));
+    Bridge.put("heat", "0");
 
     web.Setup();
     
@@ -107,44 +108,7 @@ void loop()
     }
 
     web.Update();
-    
-    // if the temperature is more than the hysteresis above the set point.
-    if (sensor.GetTemperature() - BridgeGetFloat("heatSetPoint") > HEAT_SHUTOFF_HYSTERESIS)
-    {
-        // turn it off
-        digitalWrite(HEAT_PIN, LOW);
-        Bridge.put("heat", "0");
-    }
-    // else if the temperature is less than the hysteresis below the set point,
-    else if (BridgeGetFloat("heatSetPoint") - sensor.GetTemperature() > HEAT_TURNON_HYSTERESIS)
-    {
-        // turn it on
-        digitalWrite(HEAT_PIN, HIGH);
-        Bridge.put("heat", "1");
-    }
-    
-    // if the temperature is more than the hysteresis above the set point.
-    if (sensor.GetTemperature() - BridgeGetFloat("coolSetPoint") > COOL_TURNON_HYSTERESIS)
-    {
-        // turn it on
-        digitalWrite(COOL_PIN, HIGH);
-        Bridge.put("cool", "1");
-    }
-    // else if the temperature is less than the hysteresis below the set point,
-    else if (BridgeGetFloat("coolSetPoint") - sensor.GetTemperature() > COOL_SHUTOFF_HYSTERESIS)
-    {
-        // turn it off
-        digitalWrite(COOL_PIN, HIGH);
-        Bridge.put("cool", "0");
-    }
-    
-    UpdateBridge();
-    
-    delay(50);
-}
 
-void UpdateBridge()
-{
-    Bridge.put("uptime_ms",String(millis()));
+    control.Update();    
 }
 

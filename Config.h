@@ -6,9 +6,9 @@
 //-----------------------------------------------------------
 // DHT Pins
 //-----------------------------------------------------------
-#define DHT_VCC_PIN A1
-#define DHT_DATA_PIN A2
-#define DHT_GND_PIN A3
+//#define DHT_VCC_PIN A1
+#define DHT_DATA_PIN A1
+//#define DHT_GND_PIN A3
 
 #define DHT_TYPE DHT22
 
@@ -26,6 +26,8 @@
 
 // Pin where the LCD buttons are attached
 #define LCD_BUTTONS_PIN 0
+
+#define RED_LED_PIN 11
 
 //-----------------------------------------------------------
 // Thermostat Settings
@@ -59,7 +61,7 @@
 // Relay Settings
 //-----------------------------------------------------------
 
-#define HEAT_PIN 13
+#define HEAT_PIN A2
 #define COOL_PIN A4
 
 #endif // include guard
