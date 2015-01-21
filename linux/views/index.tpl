@@ -7,6 +7,8 @@
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <!--External source-->
         <link rel="stylesheet" href="javascript/jquery-mobile/jquery.mobile.css">
+        <link href="static/launcher-icon-4x.png" rel="icon" type="image/x-icon" />
+        <link rel="manifest" href="static/android_manifest.json"/>
         <script src="javascript/jquery/jquery.js"></script>
         <script src="javascript/jquery-mobile/jquery.mobile.js"></script>
         <script src="javascript/jquery-flot/jquery.flot.js"></script>
