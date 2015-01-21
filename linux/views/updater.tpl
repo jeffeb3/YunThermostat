@@ -38,7 +38,14 @@ $(document).ready(function()
     [
         {
             label: "Update Time",
+            points: { show : false },
             data: {{updateTimeHistory}}
+        },
+        {
+            label: "Away",
+            data: {{awayHistory}},
+            points: { show : false },
+            yaxis: 2
         }
     ];
     
@@ -112,6 +119,11 @@ $(document).ready(function()
             {
                 tickFormatter: msToText,
                 min : 0
+            },
+            {
+                show: false,
+                min: -0.1,
+                max: 1.1
             }],
             legend:
             {
@@ -134,6 +146,7 @@ $(document).ready(function()
             }
             temperaturePlotData[2].data.push([data.time - {{timezone}},data.heat]);
             healthPlotData[0].data.push([data.time - {{timezone}},data.lastUpdateTime]);
+            healthPlotData[1].data.push([data.time - {{timezone}},data.away]);
                         
             tempPlot.setData(temperaturePlotData);
             tempPlot.setupGrid();

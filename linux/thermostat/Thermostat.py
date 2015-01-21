@@ -43,6 +43,7 @@ class Thermostat(threading.Thread):
         # state
         self.sleeping = False
         self.away = False
+        self.temperatureRange = (0.0, 0.0)
         
         # cache
         self.outsideTemp = 0
@@ -78,7 +79,7 @@ class Thermostat(threading.Thread):
                                                                 settings.Get("weather_api_key") + "/conditions/q/" +
                                                                 settings.Get("weather_state") + '/' + settings.Get("weather_city") + ".json"))
                         self.outsideTemp = outsideData['current_observation']['temp_f']
-                        self.log.info('Retrieved outside temp:' + str(self.outsideTemp))
+                        self.log.debug('Retrieved outside temp:' + str(self.outsideTemp))
                         outsideTempUpdated = True
                         self.lastOutsideMeasurementTime = time.time()
                     except Exception as e:
@@ -111,7 +112,7 @@ class Thermostat(threading.Thread):
                 
                 data["uptime_ms"] = heartbeat["uptime_ms"]
                 
-                self.log.info('Arduino (%.1fs) -- T: %.1f H: %.1f', data["lastUpdateTime"] / 1000.0, data["temperature"], data["humidity"])
+                self.log.debug('Arduino (%.1fs) -- T: %.1f H: %.1f', data["lastUpdateTime"] / 1000.0, data["temperature"], data["humidity"])
                 
                 with self.plotDataLock:
                     self.plotData.append(data)
@@ -173,13 +174,23 @@ class Thermostat(threading.Thread):
                 self.log.exception(e)
                 pass
 
+        new_temp_range = self.temperatureRange
         if self.sleeping:
-            return (settings.Get("heatTempSleeping"), settings.Get("coolTempSleeping"))
+            new_temp_range = (settings.Get("heatTempSleeping"), settings.Get("coolTempSleeping"))
         else:
             if self.away:
-                return (settings.Get("heatTempAway"), settings.Get("coolTempAway"))
+                new_temp_range = (settings.Get("heatTempAway"), settings.Get("coolTempAway"))
             else:
-                return (settings.Get("heatTempComfortable"), settings.Get("coolTempComfortable"))
+                new_temp_range = (settings.Get("heatTempComfortable"), settings.Get("coolTempComfortable"))
+        
+        if new_temp_range != self.temperatureRange:
+            if settings.Get('doCool'):
+                self.log.info('Changed temperature range to %0.1f...%0.1f' % new_temp_range)
+            else:
+                self.log.info('Changed temperature to %0.1f' % new_temp_range[0])
+            self.temperatureRange = new_temp_range
+        
+        return self.temperatureRange
 
     def speak(self):
         """ Record last data to thingspeak. """
@@ -226,6 +237,7 @@ class Thermostat(threading.Thread):
             "temperatureHistory" : '',
             "outsideTempHistory" : '',
             "heatHistory" : '',
+            "awayHistory" : '',
             "updateTimeHistory" : '',
         }
         
@@ -235,6 +247,7 @@ class Thermostat(threading.Thread):
                 if data["outside_temp_updated"]:
                     updaterInfo['outsideTempHistory']   += '[ %f, %f],' % (data["time"] - (time.timezone * 1000.0), data["outside_temp"])
                 updaterInfo['heatHistory']          += '[ %f, %d],' % (data["time"] - (time.timezone * 1000.0), data["heat"])
+                updaterInfo['awayHistory']          += '[ %f, %d],' % (data["time"] - (time.timezone * 1000.0), data["away"])
                 updaterInfo['updateTimeHistory']    += '[ %f, %d],' % (data["time"] - (time.timezone * 1000.0), data["lastUpdateTime"])
     
         # Add the outside brackets to each plot data.
