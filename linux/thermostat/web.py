@@ -119,11 +119,11 @@ class Web(object):
     
     def action(self):
         ''' This method gets called from the ajax calls in javascript to do things from the forms. '''
-        id = request.forms.get('id')
-        self.log.info('POST at id:"%s"', id)
-        
-        if 'Enable' in id:
-            self.log.info('Value:"%s"', request.forms.get('value'))
+        heatSetPoint = float(request.forms.get('heat'))
+        coolSetPoint = float(request.forms.get('cool'))
+        temporary = request.forms.get('temporary') == 'true'
+        permanent = request.forms.get('permanent') == 'true'
+        self.thermostat.setOverride((heatSetPoint, coolSetPoint), temporary, permanent)
         
     def settings_post(self):
         ''' When the user "saves" their settings on the ConfigurePage. '''

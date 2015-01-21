@@ -36,29 +36,48 @@
                 
                 <h3 class="status disconnected">Connecting...</h3>
 
-                <a href="#heatOverridePopup" data-rel="popup" class="ui-btn heat" id="heatOverride">Heat to: <span class="heatSetPoint">?</span>&degF <span id="heatStatus" style="color:#FF4444"> ... ON!</span></a>
-                <a href="#coolOverridePopup" data-rel="popup" class="ui-btn cool" id="coolOverride">Cool to: <span class="coolSetPoint">?</span>&degF <span id="coolStatus" style="color:#4444FF"> ... ON!</span></a>
+                <div data-role="collapsible" class="heat" data-collapsed="true">
+                    <h1>Heat to: <span class="heatSetPoint">?</span>&degF <span id="heatStatus" style="color:#FF4444"> ... ON!</span></h1>
 
-                <div data-role="popup" id="heatOverridePopup" class="ui-content">
-                    <h3><span class="heatSetPoint">?</span>&degF</h3>
-                    <div data-role="controlgroup" data-type="horizontal">
-                        <label for="heatOverrideEnable">Override</label>
-                        <input type="checkbox" id="heatOverrideEnable" name="heatOverrideEnable"/>
-                        <input type="button" id="heatOverrideMinus" value="-" />
-                        <input type="button" id="heatOverridePlus"  value="+" />
-                    </div>
+                    <fieldset data-role="controlgroup" data-type="horizontal">
+                        <input type="button" id="heatOverrideMinus" value="-"/>
+                        <input type="button" id="heatOverridePlus"  value="+"/>
+                    </fieldset>
+                    <fieldset data-role="controlgroup">
+                        <label for="heatOverrideTemporary">Temporary Override</label>
+                        <input type="radio" name="heatOverrideType" id="heatOverrideTemporary" value="temp" />
+                        <label for="heatOverridePermanent">Vacation Override</label>
+                        <input type="radio" name="heatOverrideType" id="heatOverridePermanent" value="perm" />
+                    </fieldset>
+                    <input type="button" id="heatClearOverride" value="Clear" />
                 </div>
                 
-                <div data-role="popup" id="coolOverridePopup" class="ui-content">
-                    <h3><span class="coolSetPoint">?</span>&degF</h3>
-                    <div data-role="controlgroup" data-type="horizontal">
-                        <label for="coolOverrideEnable">Override</label>
-                        <input type="checkbox" id="coolOverrideEnable" name="coolOverrideEnable"/>
-                        <input type="button" id="coolOverrideMinus" value="-" />
-                        <input type="button" id="coolOverridePlus"  value="+" />
-                    </div>
-                </div>
+                <div data-role="collapsible" class="cool" data-collapsed="true">
+                    <h1>Cool to: <span class="coolSetPoint">?</span>&degF <span id="coolStatus" style="color:#FF4444"> ... ON!</span></h1>
 
+                    <fieldset data-role="controlgroup" data-type="horizontal">
+                        <input type="button" id="coolOverrideMinus" value="-"/>
+                        <input type="button" id="coolOverridePlus"  value="+"/>
+                    </fieldset>
+                    <fieldset data-role="controlgroup">
+                        <label for="coolOverrideTemporary">Temporary Override</label>
+                        <input type="radio" name="coolOverrideType" id="coolOverrideTemporary" value="temp" />
+                        <label for="coolOverridePermanent">Vacation Override</label>
+                        <input type="radio" name="coolOverrideType" id="coolOverridePermanent" value="perm" />
+                    </fieldset>
+                    <input type="button" id="coolClearOverride" value="Clear" />
+                </div>
+                
+                <!--<div data-role="popup" id="coolOverridePopup" class="ui-content">-->
+                <!--    <h3><span class="coolSetPoint">?</span>&degF</h3>-->
+                <!--    <div data-role="controlgroup" data-type="horizontal">-->
+                <!--        <label for="coolOverrideEnable">Override</label>-->
+                <!--        <input type="checkbox" id="coolOverrideEnable" name="coolOverrideEnable"/>-->
+                <!--        <input type="button" id="coolOverrideMinus" value="-" />-->
+                <!--        <input type="button" id="coolOverridePlus"  value="+" />-->
+                <!--    </div>-->
+                <!--</div>-->
+                <!---->
                 <div data-role="collapsible" data-collapsed="false">
                     <h1>In: <span id="temperature">?</span> &degF Out: <span id="outsideTemperature">?</span>&degF</h1>
                     <div id="tempPlaceholder" class="plot-placeholder ui-body-inherit"></div>
@@ -107,7 +126,7 @@
             <div data-role="header">
                 <a href="#ContentsPage" onclick="$('#ConfigurePage').submit()" class="ui-btn ui-icon-check ui-btn-icon-left ui-btn-icon-notext">Save</a>
                 <h1>Configuration</h1>
-                <a href="#ContentsPage" id="ConfigurePageResetButton" class="ui-btn ui-icon-delete ui-btn-icon-right ui-btn-icon-notext">Save</a>
+                <a href="#ContentsPage" id="ConfigurePageResetButton" class="ui-btn ui-icon-delete ui-btn-icon-right ui-btn-icon-notext">Reset</a>
             </div>
             
             <div data-role="main" class="ui-content">

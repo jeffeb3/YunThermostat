@@ -12,17 +12,12 @@ TODO:
  - Update the docs
    - Expore using another webpage, such as ReadTheDocs to do my documentation.
  - Weather test button
- - Organize the Thermostat.py code.
- - Override from the web, temporary, vacation, etc.
- - Fix the lower time range on the config page.
  - watchdogs on the atmega and the arm with reboots
  - email alerts for resets/errors
  - command line arguments
  - Error handling, especially:
    - imports
-   - urls
-   - settings
- - dropbox integration.
- - GPS fencing
+ - dropbox integration?
+ - GPS fencing, done, on android, with thingspeak.
 
 

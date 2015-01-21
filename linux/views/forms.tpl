@@ -86,29 +86,84 @@ $(document).ready(function()
         }
     }
 
-    $("#heatOverrideMinus, #heatOverridePlus, #coolOverrideMinus, #coolOverridePlus").on('click', function()
+    // man, this function is ugly.
+    $("#heatOverrideMinus, #heatOverridePlus, #heatClearOverride, #coolOverrideMinus, #coolOverridePlus, #coolClearOverride, #heatOverrideTemporary, #heatOverridePermanent, #coolOverrideTemporary, #coolOverridePermanent").on('click', function()
     {
-        $.ajax(
+        var heat = parseFloat($(".heatSetPoint").text());
+        var cool = parseFloat($(".coolSetPoint").text());
+        
+        if ($(this).attr('id') == 'heatOverrideMinus')
         {
-            url: '/action',
-            type: 'POST',
-            data:
-            {
-                id:$(this).attr('id')
-            }
-        });
-    });
+            heat -= 1.0;
+            $(".heatSetPoint").text(heat.toPrecision(3))
+        }
+        if ($(this).attr('id') == 'heatOverridePlus')
+        {
+            heat += 1.0;
+            $(".heatSetPoint").text(heat.toPrecision(3))
+        }
+        if ($(this).attr('id') == 'heatOverrideTemporary')
+        {
+            $("#coolOverrideTemporary").prop('checked',true);
+        }
+        if ($(this).attr('id') == 'heatOverridePermanent')
+        {
+            $("#coolOverridePermanent").prop('checked',true);
+        }
 
-    $("#heatOverrideEnable, #coolOverrideEnable").on('click', function()
-    {
+        if ($(this).attr('id') == 'coolOverrideMinus')
+        {
+            cool -= 1.0;
+            $(".coolSetPoint").text(cool.toPrecision(3))
+        }
+        if ($(this).attr('id') == 'coolOverridePlus')
+        {
+            cool += 1.0;
+            $(".coolSetPoint").text(cool.toPrecision(3))
+        }
+        if ($(this).attr('id') == 'coolOverrideTemporary')
+        {
+            $("#heatOverrideTemporary").prop('checked',true);
+        }
+        if ($(this).attr('id') == 'coolOverridePermanent')
+        {
+            $("#heatOverridePermanent").prop('checked',true);
+        }
+        
+        if ($(this).attr('id') == 'heatClearOverride' ||
+            $(this).attr('id') == 'coolClearOverride')
+        {
+            $("#heatOverrideTemporary").prop('checked',false);
+            $("#heatOverridePermanent").prop('checked',false);
+            $("#coolOverrideTemporary").prop('checked',false);
+            $("#coolOverridePermanent").prop('checked',false);
+        }
+        else
+        {
+            // This is a case where we need to have something checked.
+            if (!$("#heatOverrideTemporary").prop('checked') &&
+                !$("#heatOverridePermanent").prop('checked'))
+            {
+                // set it to temporary, for now.
+                $("#heatOverrideTemporary").prop('checked',true);
+                $("#coolOverrideTemporary").prop('checked',true);
+            }
+        }
+        
+        $('input[name="heatOverrideType"]').checkboxradio('refresh');
+        $('input[name="coolOverrideType"]').checkboxradio('refresh');
+
+        
         $.ajax(
         {
             url: '/action',
             type: 'POST',
             data:
             {
-                id:$(this).attr('id'),
-                value:$(this).prop('checked')
+                heat:heat,
+                cool:cool,
+                temporary:$("#heatOverrideTemporary").prop('checked'),
+                permanent:$("#heatOverridePermanent").prop('checked'),
             }
         });
     });

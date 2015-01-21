@@ -44,6 +44,8 @@ class Thermostat(threading.Thread):
         self.sleeping = False
         self.away = False
         self.temperatureRange = (0.0, 0.0)
+        self.overrideTemperatureRange = None
+        self.overrideTemperatureType = None
         
         # cache
         self.outsideTemp = 0
@@ -184,13 +186,43 @@ class Thermostat(threading.Thread):
                 new_temp_range = (settings.Get("heatTempComfortable"), settings.Get("coolTempComfortable"))
         
         if new_temp_range != self.temperatureRange:
+            if self.overrideTemperatureType == 'temporary':
+                self.log.info('removing temperature override.')
+                self.overrideTemperatureRange = None
+                self.overrideTemperatureType = None
             if settings.Get('doCool'):
                 self.log.info('Changed temperature range to %0.1f...%0.1f' % new_temp_range)
             else:
                 self.log.info('Changed temperature to %0.1f' % new_temp_range[0])
             self.temperatureRange = new_temp_range
+
+        if self.overrideTemperatureType is not None:
+            return self.overrideTemperatureRange
+        else:
+            return self.temperatureRange
+
+    def setOverride(self, temperatureRangeTuple, temporary, permanent):
+        """ Set an override. Either temporary, or permanent. """
+        if not temporary and not permanent:
+            self.overrideTemperatureRange = None
+            self.overrideTemperatureType = None
+            self.log.info("Clearing temperature override")
         
-        return self.temperatureRange
+        if temporary:
+            self.overrideTemperatureType = 'temporary'
+            self.overrideTemperatureRange = temperatureRangeTuple
+            if settings.Get('doCool'):
+                self.log.info('Setting temporary override to %0.1f..%0.1f' % temperatureRangeTuple)
+            else:
+                self.log.info('Setting temporary override to %0.1f' % temperatureRangeTuple[0])
+
+        if permanent:
+            self.overrideTemperatureType = 'permanent'
+            self.overrideTemperatureRange = temperatureRangeTuple
+            if settings.Get('doCool'):
+                self.log.info('Setting permanent override to %0.1f..%0.1f' % temperatureRangeTuple)
+            else:
+                self.log.info('Setting permanent override to %0.1f' % temperatureRangeTuple[0])
 
     def speak(self):
         """ Record last data to thingspeak. """
