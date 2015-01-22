@@ -148,16 +148,19 @@ class Thermostat(threading.Thread):
             # we are still asleep
             if not self.sleeping:
                 self.log.info('Started Sleeping')
+                self.clearOverride()
             self.sleeping = True
         elif minutes < sleep:
             # we are just waking up
             if self.sleeping:
                 self.log.info('Stopped Sleeping')
+                self.clearOverride()
             self.sleeping = False
         else:
             # we went back to sleep
             if not self.sleeping:
                 self.log.info('Started Sleeping')
+                self.clearOverride()
             self.sleeping = True
         
         if ((time.time() - self.lastAwayMeasurementTime) > 360):
@@ -170,6 +173,8 @@ class Thermostat(threading.Thread):
                         self.log.info('Setting to away')
                     else:
                         self.log.info('Setting to home')
+                    self.clearOverride()
+                self.away = new_away
                 self.lastAwayMeasurementTime = time.time()
             except Exception as e:
                 # swallow any exceptions, we don't want the thermostat to break if there is no Internet
@@ -186,10 +191,6 @@ class Thermostat(threading.Thread):
                 new_temp_range = (settings.Get("heatTempComfortable"), settings.Get("coolTempComfortable"))
         
         if new_temp_range != self.temperatureRange:
-            if self.overrideTemperatureType == 'temporary':
-                self.log.info('removing temperature override.')
-                self.overrideTemperatureRange = None
-                self.overrideTemperatureType = None
             if settings.Get('doCool'):
                 self.log.info('Changed temperature range to %0.1f...%0.1f' % new_temp_range)
             else:
@@ -200,6 +201,14 @@ class Thermostat(threading.Thread):
             return self.overrideTemperatureRange
         else:
             return self.temperatureRange
+
+    def clearOverride(self):
+        if self.overrideTemperatureType == 'temporary':
+            self.log.info('removing temperature override.')
+            self.overrideTemperatureRange = None
+            self.overrideTemperatureType = None
+
+    
 
     def setOverride(self, temperatureRangeTuple, temporary, permanent):
         """ Set an override. Either temporary, or permanent. """
