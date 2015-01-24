@@ -10,14 +10,21 @@ Unfortunately, I just reogranized everything, and I'm not up to date on the docs
 TODO:
 =====
  - Update the docs
-   - Expore using another webpage, such as ReadTheDocs to do my documentation.
+   - Explore using another webpage, such as ReadTheDocs to do my documentation.
+   - Make links to the online documentation from the web interface. For example, have a section on howto set up the
+   weather API in the docs from the weather API settings section.
  - Weather test button
- - watchdogs on the atmega and the arm with reboots
+ - Graph history length buttons
+ - Ability to add data points for Thingspeak away detection
+ - watchdogs on the atmega and the arm with reboots.
+  - Also add checks for running the heat/AC too long, or too frequently.
  - email alerts for resets/errors
+  - Working for the SMTP handler. Need to add explicit events for starting (restarting) and OOR errors.
  - command line arguments
  - Error handling, especially:
    - imports
- - dropbox integration?
- - GPS fencing, done, on android, with thingspeak.
-
+ - Check into the ATMEGA config for disabling the cool function.
+ - ATMEGA Display:
+  - Configure to show the time
+  - Configure to show the outdoor temperature (possibly throught the bridge.py interface).
 
