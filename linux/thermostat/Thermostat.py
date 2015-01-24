@@ -38,7 +38,6 @@ class Thermostat(threading.Thread):
         # run these events right away.
         self.lastLoopTime = 0
         self.lastOutsideMeasurementTime = 0
-        self.lastAwayMeasurementTime = 0
 
         # state
         self.sleeping = False
@@ -163,23 +162,21 @@ class Thermostat(threading.Thread):
                 self.clearOverride()
             self.sleeping = True
         
-        if ((time.time() - self.lastAwayMeasurementTime) > 360):
-            try:
-                url = 'http://api.thingspeak.com/channels/' + settings.Get('thingspeak_location_channel') + '/feeds/last.json'
-                url += '?key=' + settings.Get('thingspeak_location_api_key')
-                new_away = ("0" == json.load(urllib2.urlopen(url))['field1'])
-                if new_away != self.away:
-                    if new_away:
-                        self.log.info('Setting to away')
-                    else:
-                        self.log.info('Setting to home')
-                    self.clearOverride()
-                self.away = new_away
-                self.lastAwayMeasurementTime = time.time()
-            except Exception as e:
-                # swallow any exceptions, we don't want the thermostat to break if there is no Internet
-                self.log.exception(e)
-                pass
+        try:
+            url = 'http://api.thingspeak.com/channels/' + settings.Get('thingspeak_location_channel') + '/feeds/last.json'
+            url += '?key=' + settings.Get('thingspeak_location_api_key')
+            new_away = ("0" == json.load(urllib2.urlopen(url))['field1'])
+            if new_away != self.away:
+                if new_away:
+                    self.log.info('Setting to away')
+                else:
+                    self.log.info('Setting to home')
+                self.clearOverride()
+            self.away = new_away
+        except Exception as e:
+            # swallow any exceptions, we don't want the thermostat to break if there is no Internet
+            self.log.exception(e)
+            pass
 
         new_temp_range = self.temperatureRange
         if self.sleeping:
