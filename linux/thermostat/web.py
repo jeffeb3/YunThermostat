@@ -52,7 +52,7 @@ class Web(object):
         
         previous_time = 0
 
-        self.log.info('Starting measurements stream to %s', request.remote_addr)
+        self.log.debug('Starting measurements stream to %s', request.remote_addr)
     
         while True:
             # Send the data to the web page in the server sent event format.
