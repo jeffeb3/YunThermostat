@@ -2,6 +2,7 @@
 # The place where the thermostat runs.
 
 # system imports
+import commands
 import copy
 import datetime
 import json
@@ -20,6 +21,16 @@ def uptime():
     with open('/proc/uptime', 'r') as f:
         uptime_seconds = float(f.readline().split()[0])
         return uptime_seconds
+
+def freeMem():
+    ''' get this system's free memory (unix only, sorry).'''
+    text = commands.getoutput('free -m').split('\n')
+    for line in text:
+        if '-/+ buffers' in line:
+            values = line.split()
+            used = float(values[2])
+            free = float(values[3])
+            return used / (used + free)
 
 class Thermostat(threading.Thread):
     """
@@ -99,6 +110,7 @@ class Thermostat(threading.Thread):
                 data = data["value"]
                 data["time"] = time.time() * 1000.0
                 data["linux_uptime_ms"] = uptime() * 1000.0
+                data["linux_free_mem_perc"] = freeMem() * 100.0
                 data["py_uptime_ms"] = (time.time() - self.startTime) * 1000.0
                 data["outside_temp"] = self.outsideTemp
                 data["outside_temp_updated"] = outsideTempUpdated
