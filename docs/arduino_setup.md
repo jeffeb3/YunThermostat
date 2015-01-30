@@ -1,17 +1,15 @@
 
 # Arduino Setup
 
-1. Update the firmware.
-    [http://arduino.cc/en/Tutorial/YunSysupgrade]
+1. [Update the firmware.](http://arduino.cc/en/Tutorial/YunSysupgrade)
 
 1. Configure it for your password/wifi settings.
 
 1. Set the REST configuration to Open.
 
-1. Upgrade the storage with an SD card:
-    [http://arduino.cc/en/Tutorial/ExpandingYunDiskSpace]
+1. [Upgrade the storage with an SD card:](http://arduino.cc/en/Tutorial/ExpandingYunDiskSpace)
 
-1. upload the thermostat.ino sketch
+1. Upload the thermostat.ino sketch
 
 ## External Dependencies:
 
@@ -33,9 +31,9 @@ Third, install the javascript libraries into the javascript folder.
 
 todo...
 
-1. [jquery 1.7.2]()
-1. [jquery-mobile 1.4.5]()
-1. [jquery-flot 0.8.3]()
+1. [jquery 1.7.2](http://jquery.com/download/)
+1. [jquery-mobile 1.4.5](http://jquerymobile.com/download/)
+1. [jquery-flot 0.8.3](http://flotcharts.org)
     
 ## Install the thermostat files
 

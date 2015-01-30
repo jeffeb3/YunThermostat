@@ -54,6 +54,11 @@ The script is in the github repo at:
 
 Follow the instructions on thingspeak, but use the script from the YunThermostat instead.
 
+You'll also have to [enable cron](http://wiki.openwrt.org/doc/howto/notuci.config):
+
+    sh /etc/init.d/cron start
+    sh /etc/init.d/cron enable
+
 ## Set up Away/Home Status
 
 TODO

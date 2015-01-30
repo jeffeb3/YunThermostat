@@ -51,7 +51,7 @@ that's also integrated.
 1. The Arduino software (with support for the Yun)
 1. Python
 1. Bottle, a very light weight python web server
-1. JQuery, JQuery Mobile, and Jquery Flot. Open source Java Script tools
+1. JQuery, JQuery Mobile, and JQuery Flot. Open source Java Script tools
 
 ### The cloud services in use are:
 1. Thingspeak.com
@@ -62,22 +62,26 @@ that's also integrated.
     # Everything that goes onto the Linux side of the Yun
     linux/                      
         javascript/             # Where to put the javascript includes
-        scripts/                # helper scripts for running automatically on the Yun
-        static/                 # Any web items that are version controlled but don't ever
-                                # change
+        scripts/                # helper scripts for running automatically on the
+                                # Yun
+        static/                 # Any web items that are version controlled but
+                                # don't ever change
         thermostat/             # The main python library for the thermostat
             email_utils.py      # Utilities to drive outgoing emails
             settings.py         # a settings store for the thermostat
-            sseLogHandler.py    # python logging.Handler that supports sending logs
-                                # to a live web page
+            sseLogHandler.py    # python logging.Handler that supports sending
+                                # logs to a live web page
             Thermostat.py       # The main logic for the python Thermostat
-            Web.py              # Web interface (Bottle interface) for the thermostat.
-        views/                  # Folder that contains templates for the bottle web interface.
+            Web.py              # Web interface (Bottle interface) for the
+                                # thermostat.
+        views/                  # Folder that contains templates for the bottle
+                                # web interface.
             forms.tpl           # Javascript to handle the configuration page
             index.tpl           # The web interface html
-            updater.tpl         # Javascript to handle updating the web interface with
-                                # data from python.
-        settings.json           # Storage for your settings (not committed to git).
+            updater.tpl         # Javascript to handle updating the web interface
+                                # with data from python.
+        settings.json           # Storage for your settings (not committed to
+                                # git).
         thermostatApp.py        # Main app to launch the thermostat.
 
     # Arduino files    
