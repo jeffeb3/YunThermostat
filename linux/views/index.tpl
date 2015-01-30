@@ -33,6 +33,7 @@
             <div data-role="main" class="ui-content">
 
                 <h4 class="connected">Last Update: <span id="now"></span></h4>
+                <h4>Uptime: <span id="uptime_number">?</span></h4>
                 
                 <h3 class="status disconnected">Connecting...</h3>
 
@@ -68,16 +69,11 @@
                     <input type="button" id="coolClearOverride" value="Clear" />
                 </div>
                 
-                <!--<div data-role="popup" id="coolOverridePopup" class="ui-content">-->
-                <!--    <h3><span class="coolSetPoint">?</span>&degF</h3>-->
-                <!--    <div data-role="controlgroup" data-type="horizontal">-->
-                <!--        <label for="coolOverrideEnable">Override</label>-->
-                <!--        <input type="checkbox" id="coolOverrideEnable" name="coolOverrideEnable"/>-->
-                <!--        <input type="button" id="coolOverrideMinus" value="-" />-->
-                <!--        <input type="button" id="coolOverridePlus"  value="+" />-->
-                <!--    </div>-->
-                <!--</div>-->
-                <!---->
+                <a href="#" data-role="button" data-inline="true" id="plotTimeAll">All</a>
+                <a href="#" data-role="button" data-inline="true" id="plotTimeDay">Day</a>
+                <a href="#" data-role="button" data-inline="true" id="plotTimeHour">Hour</a>
+                <a href="#" data-role="button" data-inline="true" id="plotTimeMinutes">Minutes</a>
+
                 <div data-role="collapsible" data-collapsed="false">
                     <h1>In: <span id="temperature">?</span> &degF Out: <span id="outsideTemperature">?</span>&degF</h1>
                     <div id="tempPlaceholder" class="plot-placeholder ui-body-inherit"></div>
@@ -85,8 +81,13 @@
                 </div>
 
                 <div data-role="collapsible" data-collapsed="false">
+                    <h1>Set Point</h1>
+                    <div id="logicPlaceholder" class="plot-placeholder ui-body-inherit"></div>
+                    <div id="logicLegend"      class="legend-placeholder ui-body-inherit"></div>
+                </div>
+
+                <div data-role="collapsible" data-collapsed="true">
                     <h1>System Health</h1>
-                    <h4>Uptime: <span id="uptime_number">?</span></h4>
                     <div id="healthPlaceholder" class="plot-placeholder"></div>
                     <div id="healthLegend"      class="legend-placeholder ui-body-inherit"></div>
                 </div>
@@ -98,7 +99,7 @@
                             <tr>
                                 <th data-priority="3">Level</th>
                                 <th data-priority="1">Message</th>
-                                <th data-priority="5">Time</th>
+                                <th data-priority="2">Time</th>
                                 <th data-priority="5">Log Name</th>
                                 <th data-priority="5">Source</th>
                             </tr>

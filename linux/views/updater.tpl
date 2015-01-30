@@ -19,18 +19,58 @@ $(document).ready(function()
     [
         {
             label: "Temp(&degF)",
-            data: {{temperatureHistory}}
+            data: {{temperatureHistory}},
+            color: 'yellow'
         },
         {
             label: "OutsideTemp(&degF)",
             data: {{outsideTempHistory}},
+            color: 'lightblue',
             yaxis: 2
         },
         {
             label: "Heat On",
             data: {{heatHistory}},
             points: { show : false },
+            color: 'red',
             yaxis: 3
+        },
+        {
+            label: "A/C On",
+            data: {{coolHistory}},
+            points: { show : false },
+            color: 'blue',
+            yaxis: 3
+        }
+    ];
+    
+    var logicPlotData =
+    [
+        {
+            label: "Heat Temp(&degF)",
+            points: { show : false },
+            color: 'red',
+            data: {{setHeatHistory}}
+        },
+        {
+            label: "Cool Temp(&degF)",
+            points: { show : false },
+            color: 'blue',
+            data: {{setCoolHistory}}
+        },
+        {
+            label: "Home",
+            data: {{homeHistory}},
+            points: { show : false },
+            color: 'lightgreen',
+            yaxis: 2
+        },
+        {
+            label: "Sleeping",
+            data: {{sleepHistory}},
+            color: 'lightblue',
+            points: { show : false },
+            yaxis: 2
         }
     ];
     
@@ -42,14 +82,15 @@ $(document).ready(function()
             data: {{updateTimeHistory}}
         },
         {
-            label: "Away",
-            data: {{awayHistory}},
+            label: "Free Memory %",
+            data: {{memHistory}},
             points: { show : false },
             yaxis: 2
         }
     ];
     
     var tempPlot = null;
+    var logicPlot = null;
     var healthPlot = null;
 
     // *************** Initial GUI updates
@@ -57,7 +98,7 @@ $(document).ready(function()
     $("#coolStatus").hide();
 
     // *************** Initialize the plots
-    
+
     tempPlot = $.plot(
         $("#tempPlaceholder"),
         temperaturePlotData,
@@ -65,7 +106,7 @@ $(document).ready(function()
             xaxes: [
                     {
                         ticks: 4,
-                        mode: 'time'
+                        mode: 'time',
                     }
                     ],
             yaxes: [
@@ -89,8 +130,39 @@ $(document).ready(function()
             },
             legend:
             {
-                noColumns : 5,
+                noColumns : 4,
                 container : $("#tempLegend")
+            }
+        });
+
+    logicPlot = $.plot(
+        $("#logicPlaceholder"),
+        logicPlotData,
+        { 
+            xaxes: [
+                    {
+                        ticks: 4,
+                        mode: 'time',
+                    }
+                    ],
+            yaxes: [
+            {
+                tickFormatter : temperatureDeg,
+                tickDecimals: 1
+            },
+            {
+                show: false,
+                min: -0.1,
+                max: 1.1
+            }],
+            series: {
+                shadowSize: 0, // Drawing is faster without shadows
+                lines: { show: true }
+            },
+            legend:
+            {
+                noColumns : 4,
+                container : $("#logicLegend")
             }
         });
 
@@ -106,10 +178,6 @@ $(document).ready(function()
             {
                 show: true
             },
-            points:
-            {
-                show: true
-            },
             xaxis:
             {
                 ticks: 4,
@@ -121,16 +189,17 @@ $(document).ready(function()
                 min : 0
             },
             {
-                show: false,
-                min: -0.1,
-                max: 1.1
+                tickFormatter : percFormat,
+                position: "right"
             }],
             legend:
             {
-                noColumns : 3,
+                noColumns : 2,
                 container : $("#healthLegend")
             }
         });
+    
+    var plots = [tempPlot, logicPlot, healthPlot];
 
     var lastMeasureTime = 0.0;
     function updateMeasurement(data)
@@ -145,13 +214,47 @@ $(document).ready(function()
                 temperaturePlotData[1].data.push([data.time - {{timezone}},data.outside_temp]);
             }
             temperaturePlotData[2].data.push([data.time - {{timezone}},data.heat]);
+            temperaturePlotData[3].data.push([data.time - {{timezone}},data.cool]);
+
+            logicPlotData[0].data.push([data.time - {{timezone}},data.heatSetPoint]);
+            logicPlotData[1].data.push([data.time - {{timezone}},data.coolSetPoint]);
+            logicPlotData[2].data.push([data.time - {{timezone}},1.0 - data.away]);
+            logicPlotData[3].data.push([data.time - {{timezone}},data.sleeping]);
+            
             healthPlotData[0].data.push([data.time - {{timezone}},data.lastUpdateTime]);
-            healthPlotData[1].data.push([data.time - {{timezone}},data.away]);
-                        
-            tempPlot.setData(temperaturePlotData);
+            healthPlotData[1].data.push([data.time - {{timezone}},data.linux_free_mem_perc]);
+
+            tempCopy = [temperaturePlotData[0], temperaturePlotData[1]];
+            if ($("#doHeat").is(":checked"))
+            {
+                tempCopy.push(temperaturePlotData[2]);
+            }
+            if ($("#doCool").is(":checked"))
+            {
+                tempCopy.push(temperaturePlotData[3]);
+            }
+
+            tempPlot.setData(tempCopy);
             tempPlot.setupGrid();
             tempPlot.draw();
             
+            tempCopy = []
+            if ($("#doHeat").is(":checked"))
+            {
+                tempCopy.push(logicPlotData[0]);
+            }
+            if ($("#doCool").is(":checked"))
+            {
+                tempCopy.push(logicPlotData[1]);
+            }
+            tempCopy.push(logicPlotData[2]);
+            tempCopy.push(logicPlotData[3]);
+            
+
+            logicPlot.setData(tempCopy);
+            logicPlot.setupGrid();
+            logicPlot.draw();
+
             healthPlot.setData(healthPlotData);
             healthPlot.setupGrid();
             healthPlot.draw();
@@ -185,6 +288,38 @@ $(document).ready(function()
             $("#coolOverrideEnable").prop('checked', data.lcdOverride);
         }
     }
+
+    $("#plotTimeAll").click(function() {
+        $(plots).each(function() {
+            this.getOptions().xaxes[0].min = null;
+            this.setupGrid();
+            this.draw();
+        })
+    });
+    
+    $("#plotTimeDay").click(function() {
+        $(plots).each(function() {
+            this.getOptions().xaxes[0].min = Date.now() - 24 * 60 * 60 * 1000 - {{timezone}};
+            this.setupGrid();
+            this.draw();
+        })
+    });
+    
+    $("#plotTimeHour").click(function() {
+        $(plots).each(function() {
+            this.getOptions().xaxes[0].min = Date.now() - 60 * 60 * 1000 - {{timezone}};
+            this.setupGrid();
+            this.draw();
+        })
+    });
+    
+    $("#plotTimeMinutes").click(function() {
+        $(plots).each(function() {
+            this.getOptions().xaxes[0].min = Date.now() - 10 * 60 * 1000 - {{timezone}};
+            this.setupGrid();
+            this.draw();
+        })
+    });
     
     // Create server sent event connection.
     var server = new EventSource('/measurements');
@@ -260,7 +395,16 @@ function msToText(milliseconds)
     var text = seconds.toPrecision(3).toString();
     if (minutes > 0 || hours > 0 || days > 0)
     {
-        text = hours.toString() + ':' + minutes.toString() + ':' + text;
+        if (seconds < 10)
+        {
+            text = "0" + text;
+        }
+        text = minutes.toString() + ':' + text;
+        if (minutes < 10)
+        {
+            text = "0" + text;
+        }
+        text = hours.toString() + ':' + text;
     }
     if (days > 0)
     {
@@ -269,9 +413,9 @@ function msToText(milliseconds)
     return text;
 }
 
-function humidityPercent(humidity, axis)
+function percFormat(value, axis)
 {
-    return humidity.toFixed(axis.tickDecimals) + "%";
+    return value.toFixed(axis.tickDecimals) + "%";
 }
 
 function temperatureDeg(temperature, axis)

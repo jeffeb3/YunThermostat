@@ -69,6 +69,7 @@ class Thermostat(threading.Thread):
 
         # log
         self.log = logging.getLogger('thermostat.Thermostat')
+        
     
     def run(self):
         """
@@ -328,8 +329,15 @@ class Thermostat(threading.Thread):
             "temperatureHistory" : '',
             "outsideTempHistory" : '',
             "heatHistory" : '',
-            "awayHistory" : '',
+            "coolHistory" : '',
+            
+            "setHeatHistory" : '',
+            "setCoolHistory" : '',
+            "homeHistory" : '',
+            "sleepHistory" : '',
+
             "updateTimeHistory" : '',
+            "memHistory" : '',
         }
         
         with self.plotDataLock:
@@ -338,8 +346,13 @@ class Thermostat(threading.Thread):
                 if data["outside_temp_updated"]:
                     updaterInfo['outsideTempHistory']   += '[ %f, %f],' % (data["time"] - (time.timezone * 1000.0), data["outside_temp"])
                 updaterInfo['heatHistory']          += '[ %f, %d],' % (data["time"] - (time.timezone * 1000.0), data["heat"])
-                updaterInfo['awayHistory']          += '[ %f, %d],' % (data["time"] - (time.timezone * 1000.0), data["away"])
+                updaterInfo['coolHistory']          += '[ %f, %d],' % (data["time"] - (time.timezone * 1000.0), data["cool"])
+                updaterInfo['setHeatHistory']       += '[ %f, %d],' % (data["time"] - (time.timezone * 1000.0), data["heatSetPoint"])
+                updaterInfo['setCoolHistory']       += '[ %f, %d],' % (data["time"] - (time.timezone * 1000.0), data["coolSetPoint"])
+                updaterInfo['homeHistory']          += '[ %f, %d],' % (data["time"] - (time.timezone * 1000.0), 1 - data["away"])
+                updaterInfo['sleepHistory']         += '[ %f, %d],' % (data["time"] - (time.timezone * 1000.0), data["sleeping"])
                 updaterInfo['updateTimeHistory']    += '[ %f, %d],' % (data["time"] - (time.timezone * 1000.0), data["lastUpdateTime"])
+                updaterInfo['memHistory']           += '[ %f, %d],' % (data["time"] - (time.timezone * 1000.0), data["linux_free_mem_perc"])
     
         # Add the outside brackets to each plot data.
         for key, value in updaterInfo.items():
