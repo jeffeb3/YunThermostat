@@ -45,6 +45,7 @@ class Thermostat(threading.Thread):
         self.temperatureRange = (0.0, 0.0)
         self.overrideTemperatureRange = None
         self.overrideTemperatureType = None
+        self.startTime = time.time()
         
         # cache
         self.outsideTemp = 0
@@ -95,7 +96,8 @@ class Thermostat(threading.Thread):
                 data = json.load(urllib2.urlopen("http://" + settings.Get("arduino_addr") + "/data/get/"));
                 data = data["value"]
                 data["time"] = time.time() * 1000.0
-                data["py_uptime_ms"] = uptime() * 1000.0
+                data["linux_uptime_ms"] = uptime() * 1000.0
+                data["py_uptime_ms"] = (time.time() - self.startTime) * 1000.0
                 data["outside_temp"] = self.outsideTemp
                 data["outside_temp_updated"] = outsideTempUpdated
                 data["sleeping"] = self.sleeping
