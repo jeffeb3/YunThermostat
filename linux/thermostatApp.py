@@ -46,7 +46,6 @@ if __name__ == '__main__':
     log.addHandler(sseHandler)
 
     log.setLevel(logging.INFO)
-    log.info('Started at %s', str(datetime.datetime.now()))
     
     settings.Load('settings.json')
     settings.FillEmptiesWithDefaults()
@@ -60,8 +59,16 @@ if __name__ == '__main__':
     
     # start the web server
     w = web.Web(t)
+    
+    if settings.Get('email_restart'):
+        log.critical('Started at %s', str(datetime.datetime.now()))
+    else:
+        log.info('Started at %s', str(datetime.datetime.now()))
+    
     w.web.route('/logs','GET',sseHandler.logs)
     w.web.route('/log_view','GET',sseLogHandler.SseLogHandler.log_view)
+
     w.run()
 
+    # We should never get here.
     log.critical("Exiting, but I'm supposed to live forever")
