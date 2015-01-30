@@ -146,22 +146,22 @@
                         <li>
                             <div data-role="rangeslider">
                                 <label for="heatTempComfortable">Comfortable Temperature:</label>
-                                <input type="range" name="heatTempComfortable" id="heatTempComfortable" value="{{settings['heatTempComfortable']}}" min="60" max="80">
-                                <input type="range" name="coolTempComfortable" id="coolTempComfortable" value="{{settings['coolTempComfortable']}}" min="60" max="80">
+                                <input type="range" name="heatTempComfortable" id="heatTempComfortable" value="{{settings['heatTempComfortable']}}" min="60" max="90">
+                                <input type="range" name="coolTempComfortable" id="coolTempComfortable" value="{{settings['coolTempComfortable']}}" min="60" max="90">
                             </div>
                         </li>
                         <li>
                             <div data-role="rangeslider">
                                 <label for="heatTempSleeping">Sleeping Temperature:</label>
-                                <input type="range" name="heatTempSleeping" id="heatTempSleeping" value="{{settings['heatTempSleeping']}}" min="60" max="80">
-                                <input type="range" name="coolTempSleeping" id="coolTempSleeping" value="{{settings['coolTempSleeping']}}" min="60" max="80">
+                                <input type="range" name="heatTempSleeping" id="heatTempSleeping" value="{{settings['heatTempSleeping']}}" min="60" max="90">
+                                <input type="range" name="coolTempSleeping" id="coolTempSleeping" value="{{settings['coolTempSleeping']}}" min="60" max="90">
                             </div>
                         </li>
                         <li>
                             <div data-role="rangeslider">
                                 <label for="heatTempAway">Away Temperature:</label>
-                                <input type="range" name="heatTempAway" id="heatTempAway" value="{{settings['heatTempAway']}}" min="60" max="80">
-                                <input type="range" name="coolTempAway" id="coolTempAway" value="{{settings['coolTempAway']}}" min="60" max="80">
+                                <input type="range" name="heatTempAway" id="heatTempAway" value="{{settings['heatTempAway']}}" min="60" max="90">
+                                <input type="range" name="coolTempAway" id="coolTempAway" value="{{settings['coolTempAway']}}" min="60" max="90">
                             </div>
                         </li>
                     </ul>
