@@ -112,6 +112,6 @@ def Set(settingName, value):
 def Copy():
     """ return a new copy of the settings. """
     with settingsLock:
-        return copy.copy(settings)
+        return copy.deepcopy(settings)
     
     

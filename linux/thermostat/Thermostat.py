@@ -10,6 +10,7 @@ import threading
 import time
 import urllib
 import urllib2
+from collections import deque
 
 # local imports
 import settings
@@ -51,7 +52,8 @@ class Thermostat(threading.Thread):
         self.outsideTemp = 0
 
         # state data history
-        self.plotData = []
+        self.plotData = deque([], 60/5*24)
+        self.recentHistory = deque([], 10) # deque will only keep maxlen items. I'm shooting for five minutes
         self.plotDataLock = threading.RLock()
 
         # log
@@ -118,8 +120,9 @@ class Thermostat(threading.Thread):
                 self.log.debug('Arduino (%.1fs) -- T: %.1f H: %.1f', data["lastUpdateTime"] / 1000.0, data["temperature"], data["humidity"])
                 
                 with self.plotDataLock:
-                    self.plotData.append(data)
-                    self.plotData = self.plotData[-2880:] # clip to 24 hours
+                    self.recentHistory.append(data)
+                
+                self.updatePlotData()
     
                 try:
                     self.speak()
@@ -136,6 +139,42 @@ class Thermostat(threading.Thread):
                 self.log.exception(e)
                 time.sleep(60.0) # sleep for extra long.
                 continue
+    
+    def updatePlotData(self):
+        ''' Add data to the plotData based on the recent history '''
+
+        with self.plotDataLock:
+            if len(self.plotData) == 0 or self.recentHistory[0]['time'] > self.plotData[-1]['time']:
+                self.log.debug('updating plot data, len %d', len(self.plotData))
+                data = copy.deepcopy(self.recentHistory[-1])
+                
+                # average some of the data
+                sumOutsideTemp = 0.0
+                countOutsideTemp = 0
+                sumTemperature = 0.0
+                sumHumidity = 0.0
+                for pt in self.recentHistory:
+                    sumTemperature += pt['temperature']
+                    sumHumidity += pt['humidity']
+                    
+                    if pt['outside_temp_updated']:
+                        sumOutsideTemp += pt['outside_temp']
+                        countOutsideTemp += 1
+                    
+                    if pt['heat']:
+                        data['heat'] = True
+                    
+                    if pt['cool']:
+                        data['cool'] = True
+
+                if countOutsideTemp > 0:
+                    data['outside_temp'] = sumOutsideTemp / countOutsideTemp
+                    data['outside_temp_updated'] = True
+
+                data['temperature'] = sumTemperature / len(self.recentHistory)                
+                data['humidity'] = sumHumidity / len(self.recentHistory)
+                
+                self.plotData.append(data)
     
     def getSetTemperatureRange(self):
         now = datetime.datetime.now()
@@ -242,7 +281,7 @@ class Thermostat(threading.Thread):
         channelData['key'] = settings.Get("thingspeak_api_key")
 
         with self.plotDataLock:
-            data = self.plotData[-1]
+            data = self.recentHistory[-1]
         
             channelData['field1'] = data['temperature']
             if data["outside_temp_updated"]:
@@ -266,7 +305,7 @@ class Thermostat(threading.Thread):
     def copyData(self):
         """ Retrieve the latest data. """
         with self.plotDataLock:
-            return copy.copy(self.plotData[-1])
+            return copy.deepcopy(self.recentHistory[-1])
 
     
     def getPlotHistory(self):
