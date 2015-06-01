@@ -51,7 +51,7 @@ that's also integrated.
 1. The Arduino software (with support for the Yun)
 1. Python
 1. Bottle, a very light weight python web server
-1. JQuery, JQuery Mobile, and JQuery Flot. Open source Java Script tools
+1. JQuery (1.7.2), JQuery Mobile (1.4.5), and JQuery Flot (0.8.3). Open source Java Script tools
 
 ### The cloud services in use are:
 1. Thingspeak.com
