@@ -4,7 +4,7 @@ YunThermostat
 [![Gitter](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/jeffeb3/YunThermostat?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 [![Documentation Status](https://readthedocs.org/projects/yunthermostat/badge/?version=latest)](https://readthedocs.org/projects/yunthermostat/?badge=latest)
 
-Real docs are [here](yunthermostat.rtfd.org)
+Real docs are [here](yunthermostat.rtfd.org/en/latest)
 
 TODO:
 =====
