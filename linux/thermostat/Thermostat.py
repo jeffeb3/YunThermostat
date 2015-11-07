@@ -78,8 +78,8 @@ class Thermostat(threading.Thread):
         self.mqtt_client.username_pw_set(settings.Get("mqtt_user"), settings.Get("mqtt_pass"))
         self.mqtt_connected = False
         self.mqtt_client.on_connect = self.mqtt_on_connect
+        self.mqtt_client.on_message = self.mqtt_on_message
         self.mqtt_client.connect(settings.Get("mqtt_addr"), settings.Get("mqtt_port"))
-        self.mqtt_client.subscribe("home/front_room/heat/set")
 
     def run(self):
         """
@@ -170,6 +170,11 @@ class Thermostat(threading.Thread):
 
                 if self.mqtt_connected:
                     self.mqtt_client.publish("home/front_room/temp", str(data["temperature"]), 0, True)
+                    self.mqtt_client.publish("home/front_room/humidity", str(data["humidity"]), 0, True)
+                    self.mqtt_client.publish("home/front_room/heat/desired_temp", str(data["heatSetPoint"]), 0, True)
+                    self.mqtt_client.publish("home/front_room/heat/active", "ON" if data["heat"] == 1 else "OFF", 0, True)
+                    self.mqtt_client.publish("home/front_room/cool/desired_temp", str(data["coolSetPoint"]), 0, True)
+                    self.mqtt_client.publish("home/front_room/cool/active", "ON" if data["cool"] == 1 else "OFF", 0, True)
 
             except Exception as e:
                 self.log.exception(e)
@@ -282,8 +287,6 @@ class Thermostat(threading.Thread):
             self.overrideTemperatureRange = None
             self.overrideTemperatureType = None
 
-
-
     def setOverride(self, temperatureRangeTuple, temporary, permanent):
         """ Set an override. Either temporary, or permanent. """
         if not temporary and not permanent:
@@ -386,9 +389,17 @@ class Thermostat(threading.Thread):
     def mqtt_on_connect(self, mosq, obj, rc):
         if rc == 0:
             self.mqtt_connected = True
-            self.mqtt_client.publish("home/front_room/status", "OK", retain=True)
-
+            self.mqtt_client.publish("home/front_room/status", "OK", 1, retain=True)
+            self.mqtt_client.subscribe("home/front_room/heat/override_temp")
 
     def mqtt_on_message(self, mosq, obj, msg):
-        if msg.topic == "home/front_room/heat/set":
+        if msg.topic == "home/front_room/heat/override_temp":
             self.log.info("received command from mqtt '" + str(msg.payload) + "'")
+            try:
+                heat_temp = int(msg.payload)
+                self.setOverride((heat_temp, 80), True, False)
+            except TypeError as e:
+                self.log.exception(e)
+                pass
+        else:
+            self.log.info("received unknown topic: %s", msg.topic)
