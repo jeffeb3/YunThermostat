@@ -11,13 +11,14 @@ import threading
 import time
 import urllib
 import urllib2
+import mosquitto
 from collections import deque
 
 # local imports
 import settings
 
 def uptime():
-    ''' get this system's seconds since starting '''    
+    ''' get this system's seconds since starting '''
     with open('/proc/uptime', 'r') as f:
         uptime_seconds = float(f.readline().split()[0])
         return uptime_seconds
@@ -45,7 +46,7 @@ class Thermostat(threading.Thread):
         """
         threading.Thread.__init__(self)
         # Set to daemon so the main thread will exit even if this is still going.
-        self.daemon = True 
+        self.daemon = True
 
         # run these events right away.
         self.lastLoopTime = 0
@@ -58,7 +59,7 @@ class Thermostat(threading.Thread):
         self.overrideTemperatureRange = None
         self.overrideTemperatureType = None
         self.startTime = time.time()
-        
+
         # cache
         self.outsideTemp = 0
 
@@ -69,8 +70,17 @@ class Thermostat(threading.Thread):
 
         # log
         self.log = logging.getLogger('thermostat.Thermostat')
-        
-    
+
+        # connect to mqtt
+        self.mqtt_client = mosquitto.Mosquitto()
+        # Connect
+        self.mqtt_client.will_set("home/front_room/status", "Error", 0, True)
+        self.mqtt_client.username_pw_set(settings.Get("mqtt_user"), settings.Get("mqtt_pass"))
+        self.mqtt_connected = False
+        self.mqtt_client.on_connect = self.mqtt_on_connect
+        self.mqtt_client.connect(settings.Get("mqtt_addr"), settings.Get("mqtt_port"))
+        self.mqtt_client.subscribe("home/front_room/heat/set")
+
     def run(self):
         """
         Main loop for the thermostat project. Reads data from external sources,
@@ -83,10 +93,15 @@ class Thermostat(threading.Thread):
             try:
                 # sleep a moment at a time, so that we can catch the quit signal
                 while (time.time() - self.lastLoopTime) < 30.0:
+
+                    # keep the mqtt alive.
+                    if 0 != self.mqtt_client.loop():
+                        self.mqtt_connected = False
+
                     time.sleep(0.5)
 
                 self.lastLoopTime = time.time()
-    
+
                 # Gather data from Wunderground, but only every 10 minutes (limited for free api account)
                 outsideTempUpdated = False
                 if ((time.time() - self.lastOutsideMeasurementTime) > 360):
@@ -102,10 +117,10 @@ class Thermostat(threading.Thread):
                         # swallow any exceptions, we don't want the thermostat to break if there is no Internet
                         self.log.exception(e)
                         pass
-    
+
                 # ping the server
                 heartbeat = json.load(urllib2.urlopen("http://" + settings.Get("arduino_addr") + "/arduino/heartbeat"));
-    
+
                 # Get data from server.
                 data = json.load(urllib2.urlopen("http://" + settings.Get("arduino_addr") + "/data/get/"));
                 data = data["value"]
@@ -117,7 +132,7 @@ class Thermostat(threading.Thread):
                 data["outside_temp_updated"] = outsideTempUpdated
                 data["sleeping"] = self.sleeping
                 data["away"] = self.away
-                
+
                 # convert some things to float
                 data["temperature"] = float(data["temperature"])
                 data["humidity"] = float(data["humidity"])
@@ -127,32 +142,40 @@ class Thermostat(threading.Thread):
                 data["lastUpdateTime"] = float(data["lastUpdateTime"])
                 data["heat"] = int(data["heat"])
                 data["cool"] = int(data["cool"])
-                
+
                 data["uptime_ms"] = heartbeat["uptime_ms"]
-                
+
                 self.log.debug('Arduino (%.1fs) -- T: %.1f H: %.1f', data["lastUpdateTime"] / 1000.0, data["temperature"], data["humidity"])
-                
+
                 with self.plotDataLock:
                     self.recentHistory.append(data)
-                
+
                 self.updatePlotData()
-    
+
                 try:
                     self.speak()
                 except Exception as e:
                     self.log.exception(e)
-    
+
                 # Calculate what the set point should be
                 setRange = self.getSetTemperatureRange()
-                
+
                 # send the set point to the arduino
                 urllib2.urlopen("http://" + settings.Get("arduino_addr") + "/arduino/command/" + str(setRange[0]) + "/" + str(setRange[1]))
-    
+
+                # send the data to mqtt
+                if not self.mqtt_connected:
+                    self.mqtt_client.connect(settings.Get("mqtt_addr"), settings.Get("mqtt_port"))
+                    time.sleep(0.5)
+
+                if self.mqtt_connected:
+                    self.mqtt_client.publish("home/front_room/temp", str(data["temperature"]), 0, True)
+
             except Exception as e:
                 self.log.exception(e)
                 time.sleep(60.0) # sleep for extra long.
                 continue
-    
+
     def updatePlotData(self):
         ''' Add data to the plotData based on the recent history '''
 
@@ -160,7 +183,7 @@ class Thermostat(threading.Thread):
             if len(self.plotData) == 0 or self.recentHistory[0]['time'] > self.plotData[-1]['time']:
                 self.log.debug('updating plot data, len %d', len(self.plotData))
                 data = copy.deepcopy(self.recentHistory[-1])
-                
+
                 # average some of the data
                 sumOutsideTemp = 0.0
                 countOutsideTemp = 0
@@ -169,14 +192,14 @@ class Thermostat(threading.Thread):
                 for pt in self.recentHistory:
                     sumTemperature += pt['temperature']
                     sumHumidity += pt['humidity']
-                    
+
                     if pt['outside_temp_updated']:
                         sumOutsideTemp += pt['outside_temp']
                         countOutsideTemp += 1
-                    
+
                     if pt['heat']:
                         data['heat'] = True
-                    
+
                     if pt['cool']:
                         data['cool'] = True
 
@@ -184,18 +207,18 @@ class Thermostat(threading.Thread):
                     data['outside_temp'] = sumOutsideTemp / countOutsideTemp
                     data['outside_temp_updated'] = True
 
-                data['temperature'] = sumTemperature / len(self.recentHistory)                
+                data['temperature'] = sumTemperature / len(self.recentHistory)
                 data['humidity'] = sumHumidity / len(self.recentHistory)
-                
+
                 self.plotData.append(data)
-    
+
     def getSetTemperatureRange(self):
         now = datetime.datetime.now()
         day = settings.DAYS[(now.weekday() + 1) % 7] # python says 0 is Monday.
 
         wakeUp = settings.Get(day + 'Morn')
         sleep = settings.Get(day + 'Night')
-        
+
         minutes = now.minute + 60*now.hour
         if minutes < wakeUp:
             # we are still asleep
@@ -215,7 +238,7 @@ class Thermostat(threading.Thread):
                 self.log.info('Started Sleeping')
                 self.clearOverride()
             self.sleeping = True
-        
+
         try:
             url = 'http://api.thingspeak.com/channels/' + settings.Get('thingspeak_location_channel') + '/feeds/last.json'
             url += '?key=' + settings.Get('thingspeak_location_api_key')
@@ -240,7 +263,7 @@ class Thermostat(threading.Thread):
                 new_temp_range = (settings.Get("heatTempAway"), settings.Get("coolTempAway"))
             else:
                 new_temp_range = (settings.Get("heatTempComfortable"), settings.Get("coolTempComfortable"))
-        
+
         if new_temp_range != self.temperatureRange:
             if settings.Get('doCool'):
                 self.log.info('Changed temperature range to %0.1f...%0.1f' % new_temp_range)
@@ -259,7 +282,7 @@ class Thermostat(threading.Thread):
             self.overrideTemperatureRange = None
             self.overrideTemperatureType = None
 
-    
+
 
     def setOverride(self, temperatureRangeTuple, temporary, permanent):
         """ Set an override. Either temporary, or permanent. """
@@ -267,7 +290,7 @@ class Thermostat(threading.Thread):
             self.overrideTemperatureRange = None
             self.overrideTemperatureType = None
             self.log.info("Clearing temperature override")
-        
+
         if temporary:
             self.overrideTemperatureType = 'temporary'
             self.overrideTemperatureRange = temperatureRangeTuple
@@ -295,7 +318,7 @@ class Thermostat(threading.Thread):
 
         with self.plotDataLock:
             data = self.recentHistory[-1]
-        
+
             channelData['field1'] = data['temperature']
             if data["outside_temp_updated"]:
                 channelData['field2'] = data['outside_temp']
@@ -320,7 +343,7 @@ class Thermostat(threading.Thread):
         with self.plotDataLock:
             return copy.deepcopy(self.recentHistory[-1])
 
-    
+
     def getPlotHistory(self):
         ''' returns a dictionary with variables defined for the updater template.'''
         # store this information in key-value pairs so that the template engine can find them.
@@ -330,7 +353,7 @@ class Thermostat(threading.Thread):
             "outsideTempHistory" : '',
             "heatHistory" : '',
             "coolHistory" : '',
-            
+
             "setHeatHistory" : '',
             "setCoolHistory" : '',
             "homeHistory" : '',
@@ -339,7 +362,7 @@ class Thermostat(threading.Thread):
             "updateTimeHistory" : '',
             "memHistory" : '',
         }
-        
+
         with self.plotDataLock:
             for data in self.plotData:
                 updaterInfo['temperatureHistory']   += '[ %f, %f],' % (data["time"] - (time.timezone * 1000.0), data["temperature"])
@@ -353,9 +376,19 @@ class Thermostat(threading.Thread):
                 updaterInfo['sleepHistory']         += '[ %f, %d],' % (data["time"] - (time.timezone * 1000.0), data["sleeping"])
                 updaterInfo['updateTimeHistory']    += '[ %f, %d],' % (data["time"] - (time.timezone * 1000.0), data["lastUpdateTime"])
                 updaterInfo['memHistory']           += '[ %f, %d],' % (data["time"] - (time.timezone * 1000.0), data["linux_free_mem_perc"])
-    
+
         # Add the outside brackets to each plot data.
         for key, value in updaterInfo.items():
             updaterInfo[key] = '[' + value + ']'
-    
+
         return updaterInfo
+
+    def mqtt_on_connect(self, mosq, obj, rc):
+        if rc == 0:
+            self.mqtt_connected = True
+            self.mqtt_client.publish("home/front_room/status", "OK", retain=True)
+
+
+    def mqtt_on_message(self, mosq, obj, msg):
+        if msg.topic == "home/front_room/heat/set":
+            self.log.info("received command from mqtt '" + str(msg.payload) + "'")
