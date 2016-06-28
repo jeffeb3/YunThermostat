@@ -12,6 +12,7 @@ import time
 import urllib
 import urllib2
 import mosquitto
+import socket
 from collections import deque
 
 # local imports
@@ -72,16 +73,15 @@ class Thermostat(threading.Thread):
         self.log = logging.getLogger('thermostat.Thermostat')
 
         # connect to mqtt
-        self.mqtt_client = mosquitto.Mosquitto()
-        # Connect
+        self.mqtt_client = mosquitto.Mosquitto("Thermostat")
         self.mqtt_client.will_set("home/front_room/status", "Error", 0, True)
-        self.mqtt_client.username_pw_set(settings.Get("mqtt_user"), settings.Get("mqtt_pass"))
+        # self.mqtt_client.username_pw_set(settings.Get("mqtt_user"), settings.Get("mqtt_pass"))
         self.mqtt_connected = False
         self.mqtt_client.on_connect = self.mqtt_on_connect
         self.mqtt_client.on_message = self.mqtt_on_message
-        self.mqtt_client.connect(settings.Get("mqtt_addr"), settings.Get("mqtt_port"))
+
         # Put the mwtt running stuff in it's own thread.
-        self.mqtt_thread = threading.Thread(run=self.mqtt_run)
+        self.mqtt_thread = threading.Thread(target=self.mqtt_run)
         self.mqtt_thread.daemon = True
         self.mqtt_thread.start()
 
@@ -331,7 +331,10 @@ class Thermostat(threading.Thread):
     def copyData(self):
         """ Retrieve the latest data. """
         with self.plotDataLock:
-            return copy.deepcopy(self.recentHistory[-1])
+            if len(self.recentHistory) > 0:
+	        return copy.deepcopy(self.recentHistory[-1])
+	    else:
+	        return None
 
 
     def getPlotHistory(self):
@@ -373,34 +376,49 @@ class Thermostat(threading.Thread):
 
         return updaterInfo
 
-    def mqtt_run():
+    def mqtt_run(self):
         '''
         Do the mqtt stuff. Keeping it alive. Logging to it. taking commands from it, etc.
         '''
-        data = copyData()
+        while True:
+            starttime = time.time()
+            while (time.time() - starttime) < 30.0:
+                time.sleep(0.5)
 
-        # keep the mqtt alive.
-        if 0 != self.mqtt_client.loop():
-            self.mqtt_connected = False
+                # keep the mqtt alive.
+                if 0 != self.mqtt_client.loop():
+                    if self.mqtt_connected:
+                        self.log.warning("MQTT Client Disconnected")
+                    self.mqtt_connected = False
 
-        # send the data to mqtt
-        if not self.mqtt_connected:
-            self.mqtt_client.connect(settings.Get("mqtt_addr"), settings.Get("mqtt_port"))
-            time.sleep(0.5)
+            data = self.copyData()
+            if not data:
+                continue
 
-        if self.mqtt_connected:
-            self.mqtt_client.publish("home/front_room/temp", str(data["temperature"]), 0, True)
-            self.mqtt_client.publish("home/front_room/humidity", str(data["humidity"]), 0, True)
-            self.mqtt_client.publish("home/front_room/heat/desired_temp", str(data["heatSetPoint"]), 0, True)
-            self.mqtt_client.publish("home/front_room/heat/active", "ON" if data["heat"] == 1 else "OFF", 0, True)
-            self.mqtt_client.publish("home/front_room/cool/desired_temp", str(data["coolSetPoint"]), 0, True)
-            self.mqtt_client.publish("home/front_room/cool/active", "ON" if data["cool"] == 1 else "OFF", 0, True)
+            # send the data to mqtt
+            if not self.mqtt_connected:
+                self.log.debug("Mqtt Connecting")
+                try:
+                    self.mqtt_client.connect(settings.Get("mqtt_addr"), settings.Get("mqtt_port"))
+                except socket.error as e:
+                    continue
+                time.sleep(0.5)
+
+            if self.mqtt_connected:
+                self.mqtt_client.publish("home/front_room/temp", str(data["temperature"]), 0, True)
+                self.mqtt_client.publish("home/front_room/humidity", str(data["humidity"]), 0, True)
+                self.mqtt_client.publish("home/front_room/heat/desired_temp", str(data["heatSetPoint"]), 0, True)
+                self.mqtt_client.publish("home/front_room/heat/active", "ON" if data["heat"] == 1 else "OFF", 0, True)
+                self.mqtt_client.publish("home/front_room/cool/desired_temp", str(data["coolSetPoint"]), 0, True)
+                self.mqtt_client.publish("home/front_room/cool/active", "ON" if data["cool"] == 1 else "OFF", 0, True)
 
     def mqtt_on_connect(self, mosq, obj, rc):
+        self.log.debug("Received connection info: " + str(rc))
         if rc == 0:
             self.mqtt_connected = True
             self.mqtt_client.publish("home/front_room/status", "OK", 1, retain=True)
             self.mqtt_client.subscribe("home/front_room/heat/override_temp")
+            self.log.info("MQTT Client Connected")
 
     def mqtt_on_message(self, mosq, obj, msg):
         if msg.topic == "home/front_room/heat/override_temp":
