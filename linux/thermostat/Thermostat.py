@@ -80,6 +80,10 @@ class Thermostat(threading.Thread):
         self.mqtt_client.on_connect = self.mqtt_on_connect
         self.mqtt_client.on_message = self.mqtt_on_message
         self.mqtt_client.connect(settings.Get("mqtt_addr"), settings.Get("mqtt_port"))
+        # Put the mwtt running stuff in it's own thread.
+        self.mqtt_thread = threading.Thread(run=self.mqtt_run)
+        self.mqtt_thread.daemon = True
+        self.mqtt_thread.start()
 
     def run(self):
         """
@@ -93,10 +97,6 @@ class Thermostat(threading.Thread):
             try:
                 # sleep a moment at a time, so that we can catch the quit signal
                 while (time.time() - self.lastLoopTime) < 30.0:
-
-                    # keep the mqtt alive.
-                    if 0 != self.mqtt_client.loop():
-                        self.mqtt_connected = False
 
                     time.sleep(0.5)
 
@@ -162,19 +162,6 @@ class Thermostat(threading.Thread):
 
                 # send the set point to the arduino
                 urllib2.urlopen("http://" + settings.Get("arduino_addr") + "/arduino/command/" + str(setRange[0]) + "/" + str(setRange[1]))
-
-                # send the data to mqtt
-                if not self.mqtt_connected:
-                    self.mqtt_client.connect(settings.Get("mqtt_addr"), settings.Get("mqtt_port"))
-                    time.sleep(0.5)
-
-                if self.mqtt_connected:
-                    self.mqtt_client.publish("home/front_room/temp", str(data["temperature"]), 0, True)
-                    self.mqtt_client.publish("home/front_room/humidity", str(data["humidity"]), 0, True)
-                    self.mqtt_client.publish("home/front_room/heat/desired_temp", str(data["heatSetPoint"]), 0, True)
-                    self.mqtt_client.publish("home/front_room/heat/active", "ON" if data["heat"] == 1 else "OFF", 0, True)
-                    self.mqtt_client.publish("home/front_room/cool/desired_temp", str(data["coolSetPoint"]), 0, True)
-                    self.mqtt_client.publish("home/front_room/cool/active", "ON" if data["cool"] == 1 else "OFF", 0, True)
 
             except Exception as e:
                 self.log.exception(e)
@@ -385,6 +372,29 @@ class Thermostat(threading.Thread):
             updaterInfo[key] = '[' + value + ']'
 
         return updaterInfo
+
+    def mqtt_run():
+        '''
+        Do the mqtt stuff. Keeping it alive. Logging to it. taking commands from it, etc.
+        '''
+        data = copyData()
+
+        # keep the mqtt alive.
+        if 0 != self.mqtt_client.loop():
+            self.mqtt_connected = False
+
+        # send the data to mqtt
+        if not self.mqtt_connected:
+            self.mqtt_client.connect(settings.Get("mqtt_addr"), settings.Get("mqtt_port"))
+            time.sleep(0.5)
+
+        if self.mqtt_connected:
+            self.mqtt_client.publish("home/front_room/temp", str(data["temperature"]), 0, True)
+            self.mqtt_client.publish("home/front_room/humidity", str(data["humidity"]), 0, True)
+            self.mqtt_client.publish("home/front_room/heat/desired_temp", str(data["heatSetPoint"]), 0, True)
+            self.mqtt_client.publish("home/front_room/heat/active", "ON" if data["heat"] == 1 else "OFF", 0, True)
+            self.mqtt_client.publish("home/front_room/cool/desired_temp", str(data["coolSetPoint"]), 0, True)
+            self.mqtt_client.publish("home/front_room/cool/active", "ON" if data["cool"] == 1 else "OFF", 0, True)
 
     def mqtt_on_connect(self, mosq, obj, rc):
         if rc == 0:
